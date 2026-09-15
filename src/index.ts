@@ -16,7 +16,7 @@ import { buildCoverPage, buildHtmlBanner, HTML_BANNER_CSS, buildStyleOverrideCss
 import { setActiveTheme, applyStyleOverrides, applyLogoOverride, setThemeRoots } from './theme';
 import { buildPageCss, buildPageMetricsCss, buildFallbackFontStyles, buildHljsStyleBlock, buildThemeVarsCss, HTML_BODY_CSS, buildHtmlDarkModeCss } from './css';
 import { buildIconStyles, inlineRemoteStylesheets, inlineLocalStylesheet, clearCssImportCache } from './stylesheets';
-import { injectTocWrapper, rebuildToc, inlineAlertIconColors, inlineAdmonitionIconColors, inlineHexColorCode, replaceTaskListInputs, wrapEmoji, numberHeadings, buildCaptionIndex, injectCaptionIndexes, buildWatermark, buildClassificationHeader, injectPageChrome, addBodyClasses, injectDocumentMetadata, TASK_LIST_CSS, HEADING_ICON_CSS, EMOJI_CSS, TABLE_FIT_CSS } from './html';
+import { injectTocWrapper, rebuildToc, inlineAlertIconColors, inlineAdmonitionIconColors, inlineHexColorCode, replaceTaskListInputs, wrapEmoji, numberHeadings, buildCaptionIndex, injectCaptionIndexes, buildWatermark, buildClassificationHeader, injectPageChrome, addBodyClasses, injectDocumentMetadata, injectCodeFontDefaults, TASK_LIST_CSS, HEADING_ICON_CSS, EMOJI_CSS, TABLE_FIT_CSS } from './html';
 import { renderMermaidDiagrams, MERMAID_CSS, hasMermaidPlaceholders, mermaidUnavailableReason } from './mermaid';
 import { renderGraphvizDiagrams, GRAPHVIZ_CSS, hasGraphvizPlaceholders } from './graphviz';
 import { renderInfographicDiagrams, INFOGRAPHIC_CSS, hasInfographicPlaceholders } from './infographic';
@@ -185,6 +185,7 @@ export async function buildHtmlPipeline(
     // Before anything else touches <head>: the document's own title and author,
     // which are what WeasyPrint writes into the PDF's /Title and /Author.
     htmlContent = injectDocumentMetadata(htmlContent, { title, author });
+    htmlContent = injectCodeFontDefaults(htmlContent);
 
     log('Rendering draw.io diagrams (PNG)...');
     htmlContent = await renderDrawioDiagrams(htmlContent, path.dirname(htmlFile), 'png', deps);

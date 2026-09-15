@@ -86,6 +86,38 @@ export function injectDocumentMetadata(
     return withMeta;
 }
 
+// ── Code fonts (PDF) ──────────────────────────────────────────────────────────
+
+/**
+ * Monospace fonts by name, for the PDF.
+ *
+ * Code gets the bare generic `monospace` from WeasyPrint's own stylesheet, since
+ * no theme names a code font, and fontconfig turns a generic family into a font
+ * only through alias rules in its configuration. Without those rules it takes
+ * whichever font scores best, and a document with a hand-drawn infographic has
+ * just added 851tegakizatsu to the candidates: WeasyPrint registers an
+ * `@font-face` found inside an SVG for the whole document. So on a WeasyPrint
+ * with no aliases (reported on Windows) inline code and code blocks came out
+ * handwritten. A named family matches without any alias.
+ *
+ * PDF only. A browser resolves `monospace` itself, and naming fonts there would
+ * change how the HTML export and the preview look.
+ */
+export const PDF_CODE_FONT_CSS = `<style>
+/* ── Code fonts by name: a generic family needs fontconfig aliases ─────────── */
+code, kbd, pre, samp, tt {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", "Courier New", monospace;
+}
+</style>`;
+
+/**
+ * Puts {@link PDF_CODE_FONT_CSS} first in `<head>`, ahead of the theme's
+ * stylesheet, so a theme that chooses its own code font still wins.
+ */
+export function injectCodeFontDefaults(html: string): string {
+    return html.replace(/<head[^>]*>/i, m => `${m}\n${PDF_CODE_FONT_CSS}`);
+}
+
 // ── TOC wrapper injection ─────────────────────────────────────────────────────
 
 export function injectTocWrapper(htmlContent: string): string {

@@ -8,6 +8,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Code no longer turns handwritten in a PDF with a hand-drawn infographic.**
+  No theme names a code font, so inline code and code blocks got WeasyPrint's
+  bare `monospace`. fontconfig turns that into a real font only through alias
+  rules in its configuration. Without them, reported on Windows, it takes
+  whichever font scores best. A hand-drawn infographic adds 851tegakizatsu to
+  the whole document's fonts, and that font won. The PDF now names monospace
+  fonts for each platform (Menlo, Consolas, DejaVu Sans Mono, …) ahead of the
+  generic, before the theme's stylesheet, so a theme can still choose its own.
+  The HTML export and the preview are unchanged: a browser resolves `monospace`
+  itself.
+
 ## [1.0.1] - 2026-09-15
 
 ### Added

@@ -21,6 +21,8 @@ import {
     addBodyClasses,
     TABLE_FIT_CSS,
     injectDocumentMetadata,
+    injectCodeFontDefaults,
+    PDF_CODE_FONT_CSS,
 } from '../html';
 
 let tmpDir: string;
@@ -814,5 +816,31 @@ describe('injectDocumentMetadata', () => {
         const out = injectDocumentMetadata('<head><title>Mine</title></head>', { title: 'T', author: 'A' });
         assert.match(out, /<title>Mine<\/title>/);
         assert.match(out, /name="author" content="A"/);
+    });
+});
+
+describe('injectCodeFontDefaults', () => {
+    it('names a font for every platform before the generic monospace, which comes last', () => {
+        const stack = /font-family:\s*([^;]+);/.exec(PDF_CODE_FONT_CSS)![1].split(',').map(f => f.trim());
+        // macOS, Windows, Linux — each must match by name, with no fontconfig alias.
+        for (const named of ['Menlo', 'Consolas', '"DejaVu Sans Mono"']) {
+            assert.ok(stack.indexOf(named) >= 0 && stack.indexOf(named) < stack.indexOf('monospace'), `${named} before monospace`);
+        }
+        assert.equal(stack.at(-1), 'monospace');
+    });
+
+    it('covers every element WeasyPrint gives the generic monospace', () => {
+        const selector = /\n([^{\n]+)\{/.exec(PDF_CODE_FONT_CSS.replace(/\/\*.*?\*\//g, ''))![1];
+        assert.deepEqual(selector.split(',').map(s => s.trim()).sort(), ['code', 'kbd', 'pre', 'samp', 'tt']);
+    });
+
+    it('goes first in <head>, before the theme stylesheet, so the theme can override it', () => {
+        const out = injectCodeFontDefaults('<html><head lang="en"><style>code{font-family:Theme}</style></head><body></body></html>');
+        assert.ok(out.startsWith(`<html><head lang="en">\n${PDF_CODE_FONT_CSS}`));
+        assert.ok(out.indexOf(PDF_CODE_FONT_CSS) < out.indexOf('font-family:Theme'));
+    });
+
+    it('leaves a document with no <head> alone', () => {
+        assert.equal(injectCodeFontDefaults('<p>x</p>'), '<p>x</p>');
     });
 });
