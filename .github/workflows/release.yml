@@ -100,8 +100,13 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # `--pack-destination` does not create the folder: without the mkdir, npm
+      # fails with ENOENT before a single artifact exists. That is how the v1.0.1
+      # tag ended with no Release — the first time this job ever ran on a tag.
       - name: Build the npm tarball
-        run: npm pack --pack-destination dist-artifacts
+        run: |
+          mkdir -p dist-artifacts
+          npm pack --pack-destination dist-artifacts
 
       # The extension bundles its own copy of the CLI, so this must run after the
       # root build. `bundle.js` prunes and skips symlinked themes on its own.

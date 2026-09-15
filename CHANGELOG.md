@@ -10,6 +10,11 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The release workflow builds its artifacts.** `npm pack --pack-destination
+  dist-artifacts` does not create the folder, so the first tag the workflow ever
+  ran on (`v1.0.1`) failed before packing anything and got no GitHub Release.
+  The folder is now created first.
+
 - **Code no longer turns handwritten in a PDF with a hand-drawn infographic.**
   No theme names a code font, so inline code and code blocks got WeasyPrint's
   bare `monospace`. fontconfig turns that into a real font only through alias
