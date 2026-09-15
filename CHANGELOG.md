@@ -8,6 +8,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-09-15
+
 ### Changed
 
 - **One question installs everything the extension needs.** It used to ask about
@@ -22,6 +24,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dependency, so something newly missing is still asked about.
 - **Exit code 4 names Chromium as well as WeasyPrint.** A missing Chromium exits
   4 too, and the message used to blame WeasyPrint.
+- **Replaces the withdrawn 1.0.1 and 1.0.2 releases** (1.0.3 was never published),
+  and contains everything listed under them.
 
 ### Added
 
@@ -29,13 +33,6 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and installs nothing. The extension builds its question from it. It is a flag
   of its own rather than `--setup --dry-run`, so an older CLI refuses it instead
   of ignoring `--dry-run` and installing.
-
-## [1.0.3] - 2026-09-15
-
-### Changed
-
-- **No functional changes.** Repackaged to replace the withdrawn 1.0.1 and 1.0.2
-  releases, and contains everything listed under them.
 
 ## [1.0.2] - 2026-09-15
 
@@ -1174,6 +1171,6 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First tagged release.
 
-[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.0.3...HEAD
-[1.0.3]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.3
+[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.4
 [1.0.0]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.0
