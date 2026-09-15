@@ -8,6 +8,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-15
+
 ### Added
 
 - **Live preview in the document's theme.** VS Code's built-in Markdown preview
@@ -1123,5 +1125,6 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First tagged release.
 
-[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.0
