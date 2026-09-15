@@ -60,11 +60,12 @@ platen-markdown-export --theme acme document.md             # use the themes/acm
 | `--release-note <text>`        | Sets the `Remarks` of the revision being released — the current last `Revisions` row, describing the work being signed off. Only with `--release` |
 | `--inspect`                    | Print the document's resolved frontmatter as JSON and exit. Reads the document; renders nothing, writes nothing |
 | `--answers <file.json>`        | With `--init`: fill the scaffold in from a JSON object instead of the placeholders |
-| `--json`                       | With `--list-themes` / `--list-styles`: print JSON instead of the human listing |
+| `--json`                       | With `--list-themes` / `--list-styles` / `--check-setup`: print JSON instead of the human listing |
 | `--clear-cache`                | Delete the on-disk cache of immutable remote assets (icon fonts, Twemoji) and exit. Rarely needed: a stylesheet that could not be fully inlined is no longer cached, and entries are stamped with a schema version so an upgrade never serves output built by an older release |
 | `--list-themes`                | Print available brand packages (themes) and exit                                                            |
 | `--list-styles`                | Print the active theme's cover styles and exit                                                              |
 | `--setup`                      | Install WeasyPrint, Playwright Chromium, and draw.io if missing, then exit                                  |
+| `--check-setup`                | Report which of those `--setup` would install, install nothing, and exit                                   |
 | `-q, --quiet`                  | Suppress progress output (warnings and the result line still show)                                          |
 | `-v, --version` / `-h, --help` | Version / help                                                                                              |
 

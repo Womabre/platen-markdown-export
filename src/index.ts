@@ -2,6 +2,7 @@
 'use strict';
 
 import { findWeasyprint, runBootstrap } from './bootstrap';
+import { setupStatus, formatSetupStatus } from './setup-status';
 import * as fs                      from 'fs';
 import * as path                    from 'path';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -550,7 +551,7 @@ async function reportDryRun(o: {
  *          recognise its own write and the second to know what to watch.
  */
 export async function main(opts: { inWatch?: boolean; argv?: string[] } = {}): Promise<ExportResult> {
-    const { inputFile, stylesheetPath: cliStylesheet, theme: cliTheme, mode: cliMode, output: cliOutput, dpi: cliDpi, pdfVariant: cliPdfVariant, infographicIcons: cliInfographicIcons, quiet, open, noBump, release, noRevisionBump, setup, watch, dryRun, clearCache: clearCacheFlag, strict, inspect, releaseNote, themePaths } = parseArgs(opts.argv);
+    const { inputFile, stylesheetPath: cliStylesheet, theme: cliTheme, mode: cliMode, output: cliOutput, dpi: cliDpi, pdfVariant: cliPdfVariant, infographicIcons: cliInfographicIcons, quiet, open, noBump, release, noRevisionBump, setup, checkSetup, json, watch, dryRun, clearCache: clearCacheFlag, strict, inspect, releaseNote, themePaths } = parseArgs(opts.argv);
     setQuiet(quiet);
     // Per run, so a --watch loop judges each export on its own rather than
     // failing every export after the first one that warned.
@@ -567,6 +568,19 @@ export async function main(opts: { inWatch?: boolean; argv?: string[] } = {}): P
 
     // `--setup` installs the external binaries and stops — no document is read.
     if (setup) { runBootstrap(); return NOTHING_EXPORTED; }
+
+    // `--check-setup` reports what `--setup` would install, and installs nothing.
+    if (checkSetup) {
+        // The extension parses --json from stdout, so detection's own progress
+        // lines ("draw.io CLI: …") must not land there first. Warnings still
+        // reach stderr.
+        if (json) setQuiet(true);
+        const components = await setupStatus();
+        logResult(json
+            ? JSON.stringify({ components }, null, 2)
+            : formatSetupStatus(components).split('\n').join('\n  '));
+        return NOTHING_EXPORTED;
+    }
 
     // Likewise `--clear-cache`: it empties the asset cache and stops. Nothing in
     // there is authored by anyone — every entry is a re-fetchable remote asset —

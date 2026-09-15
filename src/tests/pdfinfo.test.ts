@@ -97,7 +97,7 @@ describe('countPdfPages: compressed object streams', () => {
 
 describe('summarizePdf', () => {
     let dir: string;
-    before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-pdfinfo-')); });
+    before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-pdfinfo-')); });
     after(()  => { fs.rmSync(dir, { recursive: true, force: true }); });
 
     const write = (name: string, body: string) => {

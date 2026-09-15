@@ -33,7 +33,7 @@ async function main(): Promise<void> {
     // dist/index.js — the thing under test — rather than whatever is on PATH.
     const workspacePath            = path.resolve(extensionDevelopmentPath, '..');
 
-    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-vscode-profile-'));
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-vscode-profile-'));
 
     try {
         await runTests({

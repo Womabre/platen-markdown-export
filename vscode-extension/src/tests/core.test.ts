@@ -11,6 +11,8 @@ import {
     shouldExportOnSave, exportOnSaveReason,
     buildCliArgs, hasConfiguredMode,
     DEFAULT_INFOGRAPHIC_ICONS, WEAVEFOX_WARNING,
+    parseSetupStatus, dependenciesWithoutNode, joinNames, dependencyPromptMessage,
+    shouldAskAboutDependencies, nodeInstallFailure, installResultMessage, type Dependency,
 } from '../core';
 
 /**
@@ -647,5 +649,113 @@ describe('exportOnSaveReason', () => {
                 }
             }
         }
+    });
+});
+
+// ── Runtime dependencies ──────────────────────────────────────────────────────
+
+describe('parseSetupStatus', () => {
+    // Exactly what `--check-setup --json` prints: the CLI's result line pads the
+    // object with blank lines and indents its first line.
+    const REPORT = '\n  {\n  "components": [\n    { "id": "weasyprint", "name": "WeasyPrint", "installed": true },\n'
+        + '    { "id": "chromium", "name": "Chromium", "installed": false },\n'
+        + '    { "id": "drawio", "name": "draw.io", "installed": false }\n  ]\n}\n\n';
+
+    it('reads the report as the CLI prints it', () => {
+        assert.deepEqual(parseSetupStatus(REPORT), [
+            { id: 'weasyprint', name: 'WeasyPrint', installed: true },
+            { id: 'chromium', name: 'Chromium', installed: false },
+            { id: 'drawio', name: 'draw.io', installed: false },
+        ]);
+    });
+
+    it('is null for an older CLI, which refuses the flag instead of reporting', () => {
+        assert.equal(parseSetupStatus('Error: unknown option "--check-setup"\n\nUsage: …'), null);
+        assert.equal(parseSetupStatus(''), null);
+    });
+
+    it('is null for JSON that is not the report, rather than guessing', () => {
+        assert.equal(parseSetupStatus('{"theme":"default","styles":[]}'), null);
+        assert.equal(parseSetupStatus('{"components":[{"id":"chromium","installed":"yes"}]}'), null);
+        assert.equal(parseSetupStatus('{ not json }'), null);
+    });
+});
+
+describe('dependenciesWithoutNode', () => {
+    it('puts Node.js first and lists Chromium as missing, since it cannot be checked without Node', () => {
+        const deps = dependenciesWithoutNode({ weasyprint: true, drawio: false });
+        assert.deepEqual(deps.map(d => [d.id, d.installed]), [
+            ['node', false], ['weasyprint', true], ['chromium', false], ['drawio', false],
+        ]);
+    });
+});
+
+describe('joinNames', () => {
+    it('reads like a sentence at every length', () => {
+        assert.equal(joinNames([]), '');
+        assert.equal(joinNames(['Node.js']), 'Node.js');
+        assert.equal(joinNames(['Node.js', 'Chromium']), 'Node.js and Chromium');
+        assert.equal(joinNames(['Node.js', 'WeasyPrint', 'Chromium']), 'Node.js, WeasyPrint and Chromium');
+    });
+});
+
+describe('dependencyPromptMessage', () => {
+    const dep = (name: string): Dependency => ({ id: name.toLowerCase(), name, installed: false });
+
+    it('names every missing dependency in the one question', () => {
+        const message = dependencyPromptMessage([dep('Node.js'), dep('WeasyPrint'), dep('Chromium'), dep('draw.io')]);
+        assert.match(message, /needs Node\.js, WeasyPrint, Chromium and draw\.io /);
+        assert.match(message, /Install them now\?$/);
+    });
+
+    it('says "it" for a single dependency', () => {
+        assert.match(dependencyPromptMessage([dep('Chromium')]), /needs Chromium .*Install it now\?$/);
+    });
+});
+
+describe('shouldAskAboutDependencies', () => {
+    const missing = (...ids: string[]): Dependency[] => ids.map(id => ({ id, name: id, installed: false }));
+
+    it('asks when something missing has not been declined', () => {
+        assert.equal(shouldAskAboutDependencies(missing('chromium'), []), true);
+    });
+
+    it('stays quiet when everything missing was declined', () => {
+        assert.equal(shouldAskAboutDependencies(missing('drawio'), ['drawio']), false);
+        assert.equal(shouldAskAboutDependencies([], []), false);
+    });
+
+    it('asks again when something new goes missing after a decline', () => {
+        assert.equal(shouldAskAboutDependencies(missing('drawio', 'chromium'), ['drawio']), true);
+    });
+});
+
+describe('nodeInstallFailure', () => {
+    it('hands Linux a command to run, since sudo cannot prompt from the extension', () => {
+        const linux = nodeInstallFailure('linux');
+        assert.equal(linux.command, 'sudo apt-get install -y nodejs npm');
+        assert.match(linux.message, /administrator rights/);
+    });
+
+    it('points Windows and macOS at an installer instead', () => {
+        assert.equal(nodeInstallFailure('win32').command, undefined);
+        assert.match(nodeInstallFailure('win32').message, /nodejs\.org.*Add to PATH/);
+        assert.match(nodeInstallFailure('darwin').message, /Homebrew/);
+    });
+});
+
+describe('installResultMessage', () => {
+    it('names what was installed when everything worked', () => {
+        assert.equal(installResultMessage(['WeasyPrint', 'Chromium'], []),
+            'Platen Markdown Export: installed WeasyPrint and Chromium.');
+    });
+
+    it('names what failed and what still got installed', () => {
+        const message = installResultMessage(['WeasyPrint'], ['draw.io']);
+        assert.match(message, /could not install draw\.io\. WeasyPrint was installed\./);
+    });
+
+    it('has something to say when the CLI could not report what it installed', () => {
+        assert.equal(installResultMessage([], []), 'Platen Markdown Export: setup finished.');
     });
 });

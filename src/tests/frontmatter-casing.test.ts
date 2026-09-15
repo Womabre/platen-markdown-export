@@ -15,7 +15,7 @@ import { extractFrontmatter } from '../frontmatter';
  */
 
 let dir: string;
-before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-casing-')); });
+before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-casing-')); });
 after(()  => { fs.rmSync(dir, { recursive: true, force: true }); });
 
 let seq = 0;

@@ -13,6 +13,8 @@ import {
     applyWizardFeatures, suggestFileName, validateTitle,
     WIZARD_FEATURES, type WizardAnswers,
     DEFAULT_INFOGRAPHIC_ICONS, WEAVEFOX_WARNING,
+    parseSetupStatus, dependenciesWithoutNode, joinNames, dependencyPromptMessage,
+    shouldAskAboutDependencies, nodeInstallFailure, installResultMessage, type Dependency,
 } from './core';
 import { loadPreviewKit, previewMarkdownItPlugin, type PreviewHost, type PreviewKit } from './preview';
 
@@ -86,9 +88,8 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('platenMarkdownExport.setup', () => runSetup(context)),
+        vscode.commands.registerCommand('platenMarkdownExport.setup', () => offerDependencies(context, { ask: false })),
         vscode.commands.registerCommand('platenMarkdownExport.insertFrontmatter', (uri?: vscode.Uri) => insertFrontmatter(uri)),
-        vscode.commands.registerCommand('platenMarkdownExport.installNode', () => forceInstallNode()),
         vscode.commands.registerCommand('platenMarkdownExport.newDocument', () => newDocument(context)),
         vscode.commands.registerCommand('platenMarkdownExport.frontmatterWizard',
             (uri?: vscode.Uri) => frontmatterWizard(context, uri)),
@@ -149,7 +150,9 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
     );
     refreshStatusForActiveEditor();
 
-    void maybePromptForRuntimeDeps(context);
+    // The closest thing to "on install": the extension API has no install hook,
+    // so activation is the first moment any of this code runs.
+    void offerDependencies(context, { ask: true });
 
     // The last session's kit serves the first preview straight away; a fresh one
     // replaces it in the background, since themes may have changed in between.
@@ -530,7 +533,7 @@ async function runExport(
         }
         return;
     }
-    if (cli.command === 'node' && !(await ensureNodeAvailable(context))) {
+    if (!(await ensureCliRunnable(context, cli, { manual: opts.auto !== true }))) {
         return;
     }
 
@@ -546,79 +549,211 @@ async function runExport(
     }
 }
 
-const DEPS_PROMPT_DISMISSED_KEY = 'platenMarkdownExport.depsPromptDismissed';
+// ── Runtime dependencies ──────────────────────────────────────────────────────
+//
+// Node.js, WeasyPrint, Chromium and draw.io cannot ship inside the .vsix: one is
+// a JS runtime, one a Python package with native libraries, and the other two
+// are applications. So the extension offers to install them — with ONE question
+// that names everything missing, and ONE install that does all of it, Node.js
+// first because the rest is installed by a CLI that runs on it.
+//
+// What is missing comes from the CLI (`--check-setup --json`), the same code
+// `--setup` uses to decide what to install, so the question cannot name
+// something the install then skips. An older CLI refuses that flag, and the
+// extension then asks nothing rather than guess.
 
-/**
- * One-time, best-effort check for WeasyPrint (the one dependency that can't ship
- * inside the .vsix — it's a Python package + native libs, not an npm module).
- * Requires the bundled dist/bootstrap.js directly (no child process) to ask
- * synchronously whether it's already on the machine; if not, offers the
- * existing `--setup` flow with one click. Never blocks activation or installs
- * anything without the user choosing "Install" — this only surfaces the option.
- */
-async function maybePromptForRuntimeDeps(context: vscode.ExtensionContext): Promise<void> {
-    try {
-        const anchor = vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(context.extensionPath);
-        const cli = resolveCli(context, anchor);
+const DECLINED_DEPENDENCIES_KEY = 'platenMarkdownExport.declinedDependencies';
 
-        // Node.js itself doesn't ship inside the .vsix (it's a JS runtime, not an npm
-        // package) — every .js-form CLI invocation shells out to it, so check/offer this
-        // before the WeasyPrint/Chromium prompt below, which needs Node to actually run.
-        if (cli?.command === 'node' && !(await ensureNodeAvailable(context))) {
-            return; // declined/failed — --setup can't run without Node; retry next activation
-        }
+/** Set once the question has been shown: "Not now" means not again this session. */
+let askedThisSession = false;
 
-        if (context.globalState.get<boolean>(DEPS_PROMPT_DISMISSED_KEY)) return;
+/** The check or install in progress, shared so activation and a save never ask at the same time. */
+let dependencyFlight: Promise<DependencyOutcome> | undefined;
 
-        // Only the .js-file forms carry a local dist/ we can require() from;
-        // a bare PATH binary is left to the reactive per-export flow instead.
-        const distIndex = cli?.baseArgs[0];
-        if (!distIndex || !distIndex.toLowerCase().endsWith('.js')) return;
-
-        const bootstrapPath = path.join(path.dirname(distIndex), 'bootstrap.js');
-        if (!fs.existsSync(bootstrapPath)) return;
-
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { findWeasyprint } = require(bootstrapPath) as { findWeasyprint: () => string | null };
-        if (findWeasyprint()) return; // already installed — nothing to offer
-
-        const choice = await vscode.window.showInformationMessage(
-            'Platen Markdown Export needs a couple of one-time installs to produce PDFs and render Mermaid diagrams (WeasyPrint, Chromium). Install them now?',
-            'Install', 'Not now', "Don't ask again",
-        );
-        if (choice === 'Install') {
-            await vscode.commands.executeCommand('platenMarkdownExport.setup');
-        } else if (choice === "Don't ask again") {
-            await context.globalState.update(DEPS_PROMPT_DISMISSED_KEY, true);
-        }
-    } catch {
-        /* best-effort only — never block activation on this */
-    }
+interface DependencyOutcome {
+    /** Whether the CLI can run now. */
+    ready: boolean;
+    /** Whether this call showed the question, so a caller does not follow it with a second message. */
+    prompted: boolean;
 }
 
-async function runSetup(context: vscode.ExtensionContext): Promise<void> {
-    // Reuse CLI resolution with the workspace as the "target" anchor.
+type ResolvedCli = { command: string; baseArgs: string[] };
+
+/** Whether this CLI runs on Node.js (a `.js` entry point) rather than being a binary on PATH. */
+function cliUsesNode(cli: ResolvedCli): boolean {
+    return cli.baseArgs[0]?.toLowerCase().endsWith('.js') ?? false;
+}
+
+function cliReady(cli: ResolvedCli): boolean {
+    return !cliUsesNode(cli) || isNodeAvailable(cli.command);
+}
+
+/**
+ * Checks the runtime dependencies and installs whatever is missing.
+ *
+ * `ask: true` — activation, or an action that found Node.js missing — shows the
+ * one question first, unless it was already shown this session or the user
+ * declined everything that is missing. `ask: false` is the Install Dependencies
+ * command and button: the user has already asked, so it installs straight away.
+ */
+function offerDependencies(context: vscode.ExtensionContext, opts: { ask: boolean }): Promise<DependencyOutcome> {
+    dependencyFlight ??= resolveDependencies(context, opts).finally(() => { dependencyFlight = undefined; });
+    return dependencyFlight;
+}
+
+async function resolveDependencies(context: vscode.ExtensionContext, opts: { ask: boolean }): Promise<DependencyOutcome> {
     const anchor = vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(context.extensionPath);
     const cli = resolveCli(context, anchor);
     if (!cli) {
-        vscode.window.showErrorMessage('Platen Markdown Export: the configured platenMarkdownExport.cliPath does not exist.');
-        return;
+        if (!opts.ask) {
+            vscode.window.showErrorMessage('Platen Markdown Export: the configured platenMarkdownExport.cliPath does not exist.');
+        }
+        return { ready: false, prompted: false };
     }
-    if (cli.command === 'node' && !(await ensureNodeAvailable(context))) {
-        return;
+
+    let dependencies: Dependency[] = [];
+    try {
+        dependencies = await checkDependencies(cli);
+    } catch (err) {
+        output.appendLine(`[dependency check failed] ${(err as Error).message}`);
     }
-    await runCli(cli.command, [...cli.baseArgs, '--setup'], 'Installing runtime dependencies', undefined);
+    const missing = dependencies.filter(d => !d.installed);
+
+    if (opts.ask) {
+        if (!missing.length || askedThisSession) { return { ready: cliReady(cli), prompted: false }; }
+        const declined = context.globalState.get<string[]>(DECLINED_DEPENDENCIES_KEY, []);
+        if (!shouldAskAboutDependencies(missing, declined)) { return { ready: cliReady(cli), prompted: false }; }
+
+        askedThisSession = true;
+        const choice = await vscode.window.showInformationMessage(
+            dependencyPromptMessage(missing), 'Install', 'Not now', "Don't ask again");
+        if (choice === "Don't ask again") {
+            await context.globalState.update(DECLINED_DEPENDENCIES_KEY,
+                [...new Set([...declined, ...missing.map(d => d.id)])]);
+        }
+        if (choice !== 'Install') { return { ready: cliReady(cli), prompted: true }; }
+    } else if (dependencies.length && !missing.length) {
+        vscode.window.showInformationMessage('Platen Markdown Export: everything it needs is already installed.');
+        return { ready: true, prompted: false };
+    }
+
+    // An empty list is a CLI that could not say what is missing — an older one.
+    // Only the explicit command gets this far with it, and then `--setup` decides.
+    await installDependencies(cli, missing, dependencies.length === 0);
+    return { ready: cliReady(cli), prompted: opts.ask };
 }
 
-// ── Node.js discovery + auto-install ─────────────────────────────────────────
+/** Every dependency and whether it is installed. Empty when the CLI cannot say. */
+async function checkDependencies(cli: ResolvedCli): Promise<Dependency[]> {
+    if (!cliReady(cli)) {
+        return dependenciesWithoutNode(findWithoutNode(cli.baseArgs[0]));
+    }
+    const stdout = await queryCli(cli.command, [...cli.baseArgs, '--check-setup', '--json']);
+    return (stdout !== null ? parseSetupStatus(stdout) : null) ?? [];
+}
+
+/**
+ * WeasyPrint and draw.io, found by the CLI's own modules loaded in-process — for
+ * when Node.js is missing, so the CLI cannot be run to ask.
+ */
+function findWithoutNode(distIndex: string): { weasyprint: boolean; drawio: boolean } {
+    const found = (file: string, fn: string): boolean => {
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const mod = require(path.join(path.dirname(distIndex), file)) as Record<string, (() => string | null) | undefined>;
+            return Boolean(mod[fn]?.());
+        } catch {
+            return false;
+        }
+    };
+    return { weasyprint: found('bootstrap.js', 'findWeasyprint'), drawio: found('drawio.js', 'findDrawioCli') };
+}
+
+/**
+ * Installs everything in `missing` under one progress notification, then says
+ * once how it went. `blind` is a CLI that could not report what is missing, so
+ * `--setup` runs and decides for itself.
+ */
+async function installDependencies(cli: ResolvedCli, missing: readonly Dependency[], blind: boolean): Promise<void> {
+    const node = missing.find(d => d.id === 'node');
+    const rest = missing.filter(d => d.id !== 'node');
+    const failed: string[] = [];
+    let nodeFailed = false;
+
+    await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: 'Platen Markdown Export', cancellable: false },
+        async (progress) => {
+            if (node) {
+                progress.report({ message: 'installing Node.js…' });
+                if (!(await installNodeForPlatform())) { nodeFailed = true; return; }
+            }
+            if (!rest.length && !blind) { return; }
+
+            progress.report({ message: `installing ${blind ? 'runtime dependencies' : joinNames(rest.map(d => d.name))}…` });
+            const exitedCleanly = await runStreamed(cli.command, [...cli.baseArgs, '--setup']);
+            if (blind) {
+                if (!exitedCleanly) { failed.push('the runtime dependencies'); }
+                return;
+            }
+
+            // `--setup` warns rather than fails when one part cannot be installed,
+            // so its exit code says little. Asking again says what is still missing.
+            const after = parseSetupStatus(
+                (await queryCli(cli.command, [...cli.baseArgs, '--check-setup', '--json'])) ?? '');
+            for (const d of rest) {
+                if (after?.find(a => a.id === d.id)?.installed !== true) { failed.push(d.name); }
+            }
+        },
+    );
+
+    // Not awaited: the result is information, and holding the flight open until
+    // someone dismisses it would stall an export waiting on this install.
+    if (nodeFailed) {
+        const { message, command } = nodeInstallFailure(process.platform);
+        void vscode.window.showErrorMessage(message, ...(command ? ['Copy Command'] : []), 'Show Output')
+            .then(async (choice) => {
+                if (choice === 'Copy Command' && command) { await vscode.env.clipboard.writeText(command); }
+                if (choice === 'Show Output') { output.show(); }
+            });
+        return;
+    }
+
+    const installed = blind ? [] : missing.filter(d => !failed.includes(d.name)).map(d => d.name);
+    if (failed.length) {
+        void vscode.window.showErrorMessage(installResultMessage(installed, failed), 'Show Output')
+            .then((choice) => { if (choice === 'Show Output') { output.show(); } });
+    } else {
+        void vscode.window.showInformationMessage(installResultMessage(installed, []));
+    }
+}
+
+/**
+ * Whether the CLI can run, offering the dependency install when Node.js is
+ * missing. A manual action that still cannot run says why — unless the question
+ * was just on screen, which already did. A save stays quiet.
+ */
+async function ensureCliRunnable(
+    context: vscode.ExtensionContext,
+    cli: ResolvedCli,
+    opts: { manual: boolean },
+): Promise<boolean> {
+    if (cliReady(cli)) { return true; }
+    const { ready, prompted } = await offerDependencies(context, { ask: true });
+    if (!ready && opts.manual && !prompted) {
+        void vscode.window.showErrorMessage('Platen Markdown Export needs Node.js to run.', 'Install Dependencies')
+            .then((choice) => {
+                if (choice === 'Install Dependencies') { void vscode.commands.executeCommand('platenMarkdownExport.setup'); }
+            });
+    }
+    return ready;
+}
+
+// ── Node.js discovery + install ──────────────────────────────────────────────
 //
 // Node.js can't ship inside the .vsix (it's a JS runtime, not an npm package),
 // so every .js-form CLI invocation shells out to whatever `nodePath` resolves
-// to. Mirrors the CLI's own bootstrap.ts pattern for WeasyPrint: detect via a
-// quick probe, offer a one-click platform-native install, refresh PATH in this
-// process afterward so it works without restarting VS Code.
-
-const NODE_INSTALL_DISMISSED_KEY = 'platenMarkdownExport.nodeInstallDismissed';
+// to. These run inside `installDependencies`' progress notification and report
+// through its single result message, so none of them shows anything itself.
 
 function isNodeAvailable(nodePath: string): boolean {
     try {
@@ -629,24 +764,20 @@ function isNodeAvailable(nodePath: string): boolean {
     }
 }
 
-/** Streams an install command to the output channel + a progress notification. Resolves true on exit code 0. */
-function runInstaller(command: string, args: string[], title: string): Thenable<boolean> {
+/** Runs a command with its output streamed to the output channel. Resolves whether it exited 0. */
+function runStreamed(command: string, args: string[]): Promise<boolean> {
     output.appendLine('');
     output.appendLine(`$ ${command} ${args.map(quoteArg).join(' ')}`);
-    return vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title, cancellable: false },
-        () =>
-            new Promise<boolean>((resolve) => {
-                const child = spawn(command, args, { env: process.env });
-                child.stdout?.on('data', (d: Buffer) => output.append(d.toString()));
-                child.stderr?.on('data', (d: Buffer) => output.append(d.toString()));
-                child.on('error', (err) => {
-                    output.appendLine(`\n[install error] ${err.message}`);
-                    resolve(false);
-                });
-                child.on('close', (code) => resolve(code === 0));
-            }),
-    );
+    return new Promise<boolean>((resolve) => {
+        const child = spawn(command, args, { env: buildEnv() });
+        child.stdout?.on('data', (d: Buffer) => output.append(d.toString()));
+        child.stderr?.on('data', (d: Buffer) => output.append(d.toString()));
+        child.on('error', (err) => {
+            output.appendLine(`\n[install error] ${err.message}`);
+            resolve(false);
+        });
+        child.on('close', (code) => resolve(code === 0));
+    });
 }
 
 function refreshWindowsPath(): void {
@@ -664,10 +795,9 @@ function refreshWindowsPath(): void {
 }
 
 async function installNodeWindows(): Promise<boolean> {
-    const ok = await runInstaller(
+    const ok = await runStreamed(
         'winget',
         ['install', '--id', 'OpenJS.NodeJS.LTS', '--accept-source-agreements', '--accept-package-agreements'],
-        'Installing Node.js…',
     );
     if (ok) refreshWindowsPath();
     return isNodeAvailable('node');
@@ -676,13 +806,10 @@ async function installNodeWindows(): Promise<boolean> {
 async function installNodeMac(): Promise<boolean> {
     const brewPath = ['/opt/homebrew/bin/brew', '/usr/local/bin/brew'].find((p) => fs.existsSync(p));
     if (!brewPath) {
-        vscode.window.showErrorMessage(
-            'Platen Markdown Export: Homebrew not found, so Node.js can\'t be installed automatically. ' +
-            'Install Node.js from https://nodejs.org, or install Homebrew first (https://brew.sh).',
-        );
+        output.appendLine('\n[install skipped] Homebrew not found — it is how Node.js gets installed on macOS.');
         return false;
     }
-    const ok = await runInstaller(brewPath, ['install', 'node'], 'Installing Node.js…');
+    const ok = await runStreamed(brewPath, ['install', 'node']);
     if (ok) {
         const prefix = ['/opt/homebrew/bin', '/usr/local/bin'].find((p) => fs.existsSync(path.join(p, 'node')));
         if (prefix) process.env.PATH = `${prefix}:${process.env.PATH}`;
@@ -694,23 +821,12 @@ async function installNodeMac(): Promise<boolean> {
  * Linux has no password-free install path here, so this hands the command over.
  *
  * `sudo` prompts on a controlling terminal. A spawned child of the extension
- * host has none, so the previous `runInstaller('sudo', …)` sat inside a
- * NON-cancellable progress notification waiting on a prompt that could never be
- * answered or seen — an install that could only ever hang. macOS and Windows
- * keep their automatic paths (Homebrew and winget both work unprivileged here).
+ * host has none, so an automatic `sudo` install would wait on a prompt nobody
+ * can see or answer — an install that could only ever hang. The result message
+ * offers the command to copy instead.
  */
 async function installNodeLinux(): Promise<boolean> {
-    const command = 'sudo apt-get install -y nodejs npm';
-    output.appendLine(`\n[manual step] ${command}`);
-
-    const choice = await vscode.window.showErrorMessage(
-        'Platen Markdown Export: installing Node.js needs administrator rights, which an extension cannot request. '
-        + 'Run the install in a terminal, then try the export again.',
-        'Copy Command', 'Show Output',
-    );
-    if (choice === 'Copy Command') { await vscode.env.clipboard.writeText(command); }
-    if (choice === 'Show Output')  { output.show(); }
-
+    output.appendLine(`\n[manual step] ${nodeInstallFailure('linux').command}`);
     return isNodeAvailable('node');
 }
 
@@ -718,44 +834,6 @@ async function installNodeForPlatform(): Promise<boolean> {
     if (process.platform === 'win32') return installNodeWindows();
     if (process.platform === 'darwin') return installNodeMac();
     return installNodeLinux();
-}
-
-/** Explicit install, triggered by the "Install Node.js" button on a spawn-error notification. */
-async function forceInstallNode(): Promise<void> {
-    const installed = await installNodeForPlatform();
-    if (installed) {
-        vscode.window.showInformationMessage('Node.js installed. Try the export again.');
-    } else {
-        vscode.window.showErrorMessage(
-            'Platen Markdown Export: automatic Node.js install failed. Install it manually from ' +
-            'https://nodejs.org (tick "Add to PATH" on Windows), then restart VS Code.',
-        );
-    }
-}
-
-/** Checks for Node, offering a one-click install the first time it's missing. Returns whether Node is usable now. */
-async function ensureNodeAvailable(context: vscode.ExtensionContext): Promise<boolean> {
-    if (isNodeAvailable('node')) return true;
-    if (context.globalState.get<boolean>(NODE_INSTALL_DISMISSED_KEY)) return false;
-
-    const choice = await vscode.window.showInformationMessage(
-        'Platen Markdown Export needs Node.js installed to run its CLI. Install it now?',
-        'Install', 'Not now', "Don't ask again",
-    );
-    if (choice === "Don't ask again") {
-        await context.globalState.update(NODE_INSTALL_DISMISSED_KEY, true);
-        return false;
-    }
-    if (choice !== 'Install') return false;
-
-    const installed = await installNodeForPlatform();
-    if (!installed) {
-        vscode.window.showErrorMessage(
-            'Platen Markdown Export: automatic Node.js install failed. Install it manually from ' +
-            'https://nodejs.org (tick "Add to PATH" on Windows), then restart VS Code.',
-        );
-    }
-    return installed;
 }
 
 /** Insert a starter frontmatter block at the top of a Markdown file that lacks one. */
@@ -853,14 +931,14 @@ function runCli(
                 output.appendLine(`\n[spawn error] ${err.message}`);
 
                 if (err.code === 'ENOENT' && command === 'node') {
-                    // Proactive checks (activation, runExport, runSetup) should normally
-                    // catch this first — this is the safety net if one was skipped/raced.
+                    // `ensureCliRunnable` should normally catch this first — this is
+                    // the safety net if that check was skipped or raced.
                     vscode.window.showErrorMessage(
                         `Platen Markdown Export failed: Node.js was not found on PATH.`,
-                        'Install Node.js', 'Show Output',
+                        'Install Dependencies', 'Show Output',
                     ).then((c) => {
                         if (c === 'Show Output') { output.show(); }
-                        if (c === 'Install Node.js') { vscode.commands.executeCommand('platenMarkdownExport.installNode'); }
+                        if (c === 'Install Dependencies') { vscode.commands.executeCommand('platenMarkdownExport.setup'); }
                     });
                     done();
                     return;
@@ -1223,7 +1301,7 @@ async function wizardContext(
             'Platen Markdown Export: the CLI could not be found — set platenMarkdownExport.cliPath.');
         return null;
     }
-    if (cli.command === 'node' && !(await ensureNodeAvailable(context))) { return null; }
+    if (!(await ensureCliRunnable(context, cli, { manual: true }))) { return null; }
     return { cli, anchor };
 }
 
@@ -1342,7 +1420,7 @@ async function renderFrontmatter(
     cli: { command: string; baseArgs: string[] },
     answers: WizardAnswers,
 ): Promise<string | null> {
-    const answersFile = path.join(os.tmpdir(), `tmex-answers-${process.pid}-${Date.now()}.json`);
+    const answersFile = path.join(os.tmpdir(), `pmex-answers-${process.pid}-${Date.now()}.json`);
     try {
         fs.writeFileSync(answersFile, JSON.stringify(answers), 'utf8');
         const out = await queryCli(cli.command, [

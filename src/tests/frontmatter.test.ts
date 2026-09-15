@@ -536,7 +536,7 @@ describe('frontmatterTemplate', () => {
     it('parses as the frontmatter the exporter actually reads', () => {
         // A scaffold that does not round-trip through the parser is worse than
         // no scaffold: whoever follows it cannot tell whose fault the error is.
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-init-'));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-init-'));
         try {
             const f = path.join(dir, 'scaffold.md');
             fs.writeFileSync(f, frontmatterTemplate('2026-01-02') + '\n# Heading\n', 'utf8');
@@ -654,7 +654,7 @@ describe('yamlScalar', () => {
     });
 
     it('round-trips every awkward value through the real parser', () => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-scalar-'));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-scalar-'));
         try {
             for (const value of ['Q3 Report: Draft', "O'Brien, Jr.", 'No', '1.0', ' spaced ',
                                  'done #2', '- dash', 'a, b', '']) {
@@ -793,7 +793,7 @@ describe('frontmatterTemplate --answers', () => {
     });
 
     it('produces a document the exporter parses, for awkward answers', () => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-answers-'));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-answers-'));
         try {
             const f = path.join(dir, 'x.md');
             fs.writeFileSync(f, frontmatterTemplate('2026-01-02', {

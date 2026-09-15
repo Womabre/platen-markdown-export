@@ -48,7 +48,7 @@ let htmlTemplate: string;
 let cssTemplate: string;
 
 before(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-strings-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-strings-'));
     htmlTemplate = path.join(tmpDir, 'cover.html');
     cssTemplate  = path.join(tmpDir, 'page.css');
     fs.writeFileSync(htmlTemplate, '<html><body><h1>{{TITLE}}</h1><p>{{SLOGAN}}</p></body></html>');

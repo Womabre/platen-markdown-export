@@ -95,9 +95,12 @@ Options:
                            --theme and EXPORT_THEME baked into it
       --list-themes        Print available brand packages (themes) and exit
       --list-styles        Print the active theme's cover styles and exit
-      --json               With --list-themes / --list-styles: print JSON instead
-                           of the human listing
-      --setup              Install WeasyPrint and Playwright Chromium if missing, then exit
+      --json               With --list-themes / --list-styles / --check-setup:
+                           print JSON instead of the human listing
+      --setup              Install WeasyPrint, Playwright Chromium and draw.io if
+                           missing, then exit
+      --check-setup        Report which of those --setup would install, install
+                           nothing, and exit
   -q, --quiet              Suppress progress output; warnings and result line always shown
   -v, --version            Print version and exit
   -h, --help               Show this help message
@@ -124,7 +127,7 @@ Exit codes:
   1  Unexpected error
   2  CLI usage error (bad flags)
   3  Input file or required asset not found
-  4  WeasyPrint not found or failed
+  4  WeasyPrint or Chromium not found or failed
   5  Network or fetch error
   6  Warnings were raised and --strict was given
 `.trim();
@@ -377,6 +380,8 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedArgs {
     let clearCacheFlag            = false;
     let strict                    = false;
     let inspect                   = false;
+    let checkSetup                = false;
+    let json                      = false;
 
     // Over `tokenize`, the same splitter `handleImmediateFlags` runs on.
     //
@@ -424,8 +429,10 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedArgs {
             case '--strict':                strict         = bare(flag, value); break;
             case '--clear-cache':           clearCacheFlag = bare(flag, value); break;
             case '--inspect':               inspect        = bare(flag, value); break;
-            // Consumed by the pre-pass; accepted here so they are not "unknown".
-            case '--json':                  bare(flag, value); break;
+            case '--check-setup':           checkSetup     = bare(flag, value); break;
+            // The pre-pass consumes --json for the listings; --check-setup reads it below.
+            case '--json':                  json           = bare(flag, value); break;
+            // Consumed by the pre-pass; accepted here so it is not "unknown".
             case '--init':                  bare(flag, value); break;
 
             default:
@@ -434,29 +441,30 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedArgs {
         }
     }
 
-    // Neither `--setup` nor `--clear-cache` reads a document: one installs the
-    // runtime dependencies, the other empties the asset cache. Both stop there,
-    // so neither requires the input file the check below would otherwise demand.
+    // None of `--setup`, `--check-setup` or `--clear-cache` reads a document: the
+    // first installs the runtime dependencies, the second reports which are
+    // missing, the third empties the asset cache. All stop there, so none
+    // requires the input file the check below would otherwise demand.
     //
     // They are also mutually exclusive, and they reject a document rather than
-    // ignoring one. Both used to accept anything and silently drop it:
+    // ignoring one. They used to accept anything and silently drop it:
     // `--setup --clear-cache` ran the setup and never touched the cache, and
     // `--clear-cache doc.md` cleared the cache while saying nothing about the
     // document it was handed. A one-shot action that quietly discards half of
     // what you asked for is worse than one that says it cannot.
-    if (setup && clearCacheFlag)
+    const actions = [setup && '--setup', checkSetup && '--check-setup', clearCacheFlag && '--clear-cache']
+        .filter((a): a is string => Boolean(a));
+    if (actions.length > 1)
         throw new ExitError(
-            'Error: --setup and --clear-cache are separate actions; run them one at a time.\n', 2);
+            `Error: ${actions.join(' and ')} are separate actions; run them one at a time.\n`, 2);
 
-    if ((setup || clearCacheFlag) && (positional.length || input)) {
-        const flag = setup ? '--setup' : '--clear-cache';
-        throw new ExitError(`Error: option "${flag}" takes no input file\n`, 2);
-    }
+    if (actions.length && (positional.length || input))
+        throw new ExitError(`Error: option "${actions[0]}" takes no input file\n`, 2);
 
-    if (setup || clearCacheFlag) {
+    if (actions.length) {
         return { inputFile: '', stylesheetPath: null, theme, mode: null, output: null,
                  dpi: null, quiet, open: false, noBump: false, release: false,
-                 noRevisionBump: false, setup, watch: false, dryRun: false,
+                 noRevisionBump: false, setup, checkSetup, json, watch: false, dryRun: false,
                  clearCache: clearCacheFlag, strict: false, inspect: false,
                  releaseNote: null, themePaths, pdfVariant: null, infographicIcons: null };
     }
@@ -505,7 +513,7 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedArgs {
             `Error: --infographic-icons must be one of: ${INFOGRAPHIC_ICON_PROVIDERS.join(', ')}; got "${infographicIconsRaw}"\n`, 2);
 
     return { inputFile: input, stylesheetPath: stylesheet ?? null, theme, mode, output,
-             dpi, quiet, open, noBump, release, noRevisionBump, setup: false, watch,
+             dpi, quiet, open, noBump, release, noRevisionBump, setup: false, checkSetup: false, json, watch,
              dryRun, clearCache: false, strict, inspect, releaseNote, themePaths,
              pdfVariant: pdfVariantRaw,
              infographicIcons: infographicIconsRaw as InfographicIconProvider | null };

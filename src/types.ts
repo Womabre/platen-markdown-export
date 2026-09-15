@@ -351,6 +351,24 @@ export interface ParsedArgs {
     strict: boolean;
     /** `--setup`: install runtime dependencies and stop, with no document work. */
     setup: boolean;
+    /**
+     * `--check-setup`: report which runtime dependencies `--setup` would install,
+     * install nothing, and stop.
+     *
+     * A flag of its own rather than `--setup --dry-run`, because the VS Code
+     * extension asks it of whatever CLI it resolves, and that can be an older
+     * one. An older CLI ignores `--dry-run` next to `--setup` and would install
+     * everything on what was meant to be a question; an unknown flag is refused
+     * instead, and the extension reads that as "cannot tell".
+     */
+    checkSetup: boolean;
+    /**
+     * `--json`: machine-readable output for the question-answering flags. The
+     * pre-pass handles it for `--list-themes` / `--list-styles`; this carries it
+     * to `--check-setup`, which has to run after parsing because its Chromium
+     * check is asynchronous.
+     */
+    json: boolean;
     /** `--watch`: re-export whenever the input document changes, until interrupted. */
     watch: boolean;
     /**

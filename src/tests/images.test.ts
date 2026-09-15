@@ -257,7 +257,7 @@ describe('checkLocalImages', () => {
     const docIn = (dir: string) => path.join(dir, 'doc.html');
 
     const withTmp = <T>(fn: (dir: string) => T): T => {
-        const d = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-imgcheck-'));
+        const d = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-imgcheck-'));
         try { return fn(d); } finally { fs.rmSync(d, { recursive: true, force: true }); }
     };
 

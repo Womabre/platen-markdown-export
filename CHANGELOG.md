@@ -8,6 +8,28 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **One question installs everything the extension needs.** It used to ask about
+  Node.js in one prompt and WeasyPrint in another, and only asked about
+  WeasyPrint at all — so a machine with WeasyPrint but no Chromium found out when
+  a Mermaid export failed — while its "Install" quietly installed the draw.io
+  desktop app too. Now it checks Node.js, WeasyPrint, Chromium and draw.io when
+  it starts and, if anything is missing, asks once, naming all of it. **Install**
+  installs every missing piece under one progress notification and ends with one
+  message. An export that finds Node.js missing asks the same question instead of
+  its own, and never twice in a session. "Don't ask again" is remembered per
+  dependency, so something newly missing is still asked about.
+- **Exit code 4 names Chromium as well as WeasyPrint.** A missing Chromium exits
+  4 too, and the message used to blame WeasyPrint.
+
+### Added
+
+- **`--check-setup` (with `--json`) reports what `--setup` would install**,
+  and installs nothing. The extension builds its question from it. It is a flag
+  of its own rather than `--setup --dry-run`, so an older CLI refuses it instead
+  of ignoring `--dry-run` and installing.
+
 ## [1.0.3] - 2026-09-15
 
 ### Changed

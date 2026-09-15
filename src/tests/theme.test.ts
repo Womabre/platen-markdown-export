@@ -705,7 +705,7 @@ describe('external theme roots', () => {
         return target;
     };
 
-    before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-roots-')); });
+    before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-roots-')); });
     after(()  => { fs.rmSync(dir, { recursive: true, force: true }); setThemeRoots([]); });
     afterEach(() => setThemeRoots([]));
 
@@ -832,7 +832,7 @@ describe('themeRootsFromEnv', () => {
 
 describe('a root that is itself a theme', () => {
     let dir: string;
-    before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-single-')); });
+    before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-single-')); });
     after(()  => { fs.rmSync(dir, { recursive: true, force: true }); setThemeRoots([]); });
     afterEach(() => setThemeRoots([]));
 

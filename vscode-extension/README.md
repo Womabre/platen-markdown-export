@@ -11,15 +11,19 @@ dependencies, and every theme asset (see [Package a .vsix](#package-a-vsix) for
 how). There's nothing to build in your workspace and nothing to point
 `cliPath` at — it's only there as an override for CLI development.
 
-Three dependencies genuinely can't ship inside a `.vsix` because they aren't npm
+Four dependencies genuinely can't ship inside a `.vsix` because they aren't npm
 packages: **Node.js** itself (the CLI runs as an external process so it can own
 native deps without crashing the extension host), **WeasyPrint** (a Python
-package + native libs), and **Chromium** (Playwright's ~300MB browser download,
-needed only for Mermaid diagrams). The extension detects these are missing —
-Node.js first, since the other two ride on the CLI it runs — and offers a
-one-click "Install" (winget/brew/apt for Node.js; the CLI's existing `--setup`,
-which itself uses Homebrew/apt/winget + pip, for WeasyPrint/Chromium) — no
-manual dependency installation instructions to follow, no tasks.json to write.
+package + native libs), **Chromium** (Playwright's browser download, needed for
+Mermaid diagrams) and **draw.io** (the desktop app, needed for `.drawio`
+diagrams). When the extension starts it checks for all four and, if anything is
+missing, asks **one** question naming everything missing. **Install** installs
+all of it in one go — Node.js first (winget on Windows, Homebrew on macOS), then
+the rest through the CLI's `--setup` — under a single progress notification,
+followed by one message saying how it went. **Not now** asks again the next time
+VS Code starts; **Don't ask again** stays quiet until something *else* goes
+missing. On Linux, Node.js needs administrator rights an extension cannot ask
+for, so the result message offers the install command to copy instead.
 
 ## Features
 
@@ -41,7 +45,8 @@ manual dependency installation instructions to follow, no tasks.json to write.
   - `Markdown Export: Export as PDF + HTML`
   - `Markdown Export: Export and cut a release` — the only thing that bumps the
     revision and resets `Status`. Nothing automatic does.
-  - `Markdown Export: Install runtime dependencies` — runs the CLI's `--setup` (WeasyPrint + Chromium).
+  - `Markdown Export: Install runtime dependencies` — installs whatever is missing (Node.js, WeasyPrint,
+    Chromium, draw.io) straight away, without asking first.
   - `Markdown Export: Refresh Preview Themes` — rebuilds the preview stylesheets
     after you edit a theme's CSS (theme-folder changes rebuild them on their own).
   - `Markdown Export: Theme Markdown Preview Enhanced in This Workspace` — writes
@@ -49,8 +54,8 @@ manual dependency installation instructions to follow, no tasks.json to write.
 - Streams CLI output to the **Platen Markdown Export** output channel. A manual
   export shows a cancellable progress notification; a save-triggered one reports
   in the status bar instead, so pressing save does not pop a toast.
-- Maps the CLI's exit codes to friendly messages (e.g. a missing WeasyPrint offers
-  a one-click "Install Dependencies").
+- Maps the CLI's exit codes to friendly messages (e.g. a missing WeasyPrint or
+  Chromium offers a one-click "Install Dependencies").
 
 ## How it finds the CLI
 

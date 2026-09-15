@@ -100,7 +100,7 @@ describe('mapPool', () => {
 
 describe('writeFileAtomic', () => {
     const withTmpDir = <T>(fn: (dir: string) => T): T => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-atomic-'));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-atomic-'));
         try { return fn(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
     };
 

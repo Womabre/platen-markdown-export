@@ -574,8 +574,122 @@ describe('built-in Markdown preview theming', () => {
     });
 });
 
+describe('runtime dependencies', () => {
+    /** Records every notification, answering a question with `answer`. */
+    const recordMessages = (answer?: string): { info: string[]; errors: string[] } => {
+        const seen = { info: [] as string[], errors: [] as string[] };
+        stub('showInformationMessage', (async (message: string) => { seen.info.push(message); return answer; }) as never);
+        stub('showErrorMessage', (async (message: string) => { seen.errors.push(message); return undefined; }) as never);
+        return seen;
+    };
+
+    /**
+     * A stand-in CLI that logs every call. It reports Chromium and draw.io
+     * missing until `--setup` has run; `knowsCheck: false` is an older CLI that
+     * refuses `--check-setup` the way a real one refuses any unknown flag.
+     */
+    const fakeCli = (name: string, knowsCheck = true): { cliPath: string; setupCalls: () => string[] } => {
+        const dir = path.join(workDir, name);
+        fs.mkdirSync(dir, { recursive: true });
+        const cliPath = path.join(dir, 'fake-cli.js');
+        fs.writeFileSync(cliPath, [
+            "const fs = require('fs'), path = require('path');",
+            'const args = process.argv.slice(2);',
+            "fs.appendFileSync(path.join(__dirname, 'calls.log'), args.join(' ') + '\\n');",
+            "const installed = fs.existsSync(path.join(__dirname, 'installed'));",
+            "if (args.includes('--check-setup')) {",
+            `    if (!${knowsCheck}) { console.error('Error: unknown option "--check-setup"'); process.exit(2); }`,
+            "    console.log('\\n  ' + JSON.stringify({ components: [",
+            "        { id: 'weasyprint', name: 'WeasyPrint', installed: true },",
+            "        { id: 'chromium', name: 'Chromium', installed },",
+            "        { id: 'drawio', name: 'draw.io', installed },",
+            '    ] }, null, 2));',
+            '    process.exit(0);',
+            '}',
+            "if (args.includes('--setup')) { fs.writeFileSync(path.join(__dirname, 'installed'), ''); process.exit(0); }",
+            'process.exit(2);',
+        ].join('\n'));
+        const log = path.join(dir, 'calls.log');
+        // Only the dependency calls: a cliPath change also rebuilds the preview kit through it.
+        const setupCalls = (): string[] => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n') : [])
+            .filter(call => /setup/.test(call));
+        return { cliPath, setupCalls };
+    };
+
+    const withSettings = async (settings: Record<string, unknown>, body: () => Promise<void>): Promise<void> => {
+        const cfg = vscode.workspace.getConfiguration('platenMarkdownExport');
+        for (const [key, value] of Object.entries(settings)) {
+            await cfg.update(key, value, vscode.ConfigurationTarget.Global);
+        }
+        try {
+            await body();
+        } finally {
+            for (const key of Object.keys(settings)) {
+                await cfg.update(key, undefined, vscode.ConfigurationTarget.Global);
+            }
+        }
+    };
+
+    const exportsOf = (base: string): string[] =>
+        fs.readdirSync(workDir).filter(f => f.startsWith(base) && f.endsWith('.html'));
+
+    it('installs everything missing from the one command, and reports once', async () => {
+        const cli = fakeCli('deps-install');
+        const seen = recordMessages();
+        await withSettings({ cliPath: cli.cliPath }, async () => {
+            await vscode.commands.executeCommand('platenMarkdownExport.setup');
+        });
+
+        assert.deepEqual(cli.setupCalls(), ['--check-setup --json', '--setup', '--check-setup --json']);
+        assert.deepEqual(seen.info, ['Platen Markdown Export: installed Chromium and draw.io.']);
+        assert.deepEqual(seen.errors, []);
+    });
+
+    it('still runs --setup for a CLI too old to say what is missing', async () => {
+        const cli = fakeCli('deps-old-cli', false);
+        const seen = recordMessages();
+        await withSettings({ cliPath: cli.cliPath }, async () => {
+            await vscode.commands.executeCommand('platenMarkdownExport.setup');
+        });
+
+        assert.deepEqual(cli.setupCalls(), ['--check-setup --json', '--setup']);
+        assert.deepEqual(seen.info, ['Platen Markdown Export: setup finished.']);
+        assert.deepEqual(seen.errors, []);
+    });
+
+    // The next two share the session: the first shows the question, and the
+    // second proves it is not shown again.
+    it('asks ONE question naming everything missing when Node.js is missing, and says nothing more on "Not now"', async () => {
+        const file = path.join(workDir, 'deps-ask.md');
+        fs.writeFileSync(file, '---\nTitle: Deps\nMode: html\n---\n\n# Deps\n');
+        const seen = recordMessages('Not now');
+        await withSettings({ nodePath: path.join(workDir, 'no-such-node') }, async () => {
+            await vscode.commands.executeCommand('platenMarkdownExport.exportHtml', vscode.Uri.file(file));
+        });
+
+        assert.equal(seen.info.length, 1, `expected exactly one question, got ${JSON.stringify(seen.info)}`);
+        assert.match(seen.info[0], /^Platen Markdown Export needs Node\.js(, | and )/);
+        assert.match(seen.info[0], /Chromium/);
+        assert.match(seen.info[0], /Install them now\?$/);
+        assert.deepEqual(seen.errors, [], 'declining the question must not be followed by another message');
+        assert.deepEqual(exportsOf('deps-ask'), [], 'nothing can be exported without Node.js');
+    });
+
+    it('does not ask twice in a session; a manual export then says why, once', async () => {
+        const file = path.join(workDir, 'deps-again.md');
+        fs.writeFileSync(file, '---\nTitle: Deps\nMode: html\n---\n\n# Deps\n');
+        const seen = recordMessages('Install'); // would install if it asked — it must not ask
+        await withSettings({ nodePath: path.join(workDir, 'no-such-node') }, async () => {
+            await vscode.commands.executeCommand('platenMarkdownExport.exportHtml', vscode.Uri.file(file));
+        });
+
+        assert.deepEqual(seen.info, []);
+        assert.deepEqual(seen.errors, ['Platen Markdown Export needs Node.js to run.']);
+    });
+});
+
 export async function run(): Promise<void> {
-    workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-integration-'));
+    workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-integration-'));
 
     // The wizard and the release both resolve the CLI relative to the workspace,
     // and the workspace opened for these tests is the repository itself — so they

@@ -247,7 +247,7 @@ export const EXIT_MESSAGES: Record<number, string> = {
     1: 'Unexpected error.',
     2: 'CLI usage error (bad flags).',
     3: 'Input file or a required asset was not found.',
-    4: 'WeasyPrint not found or failed.',
+    4: 'A runtime dependency (WeasyPrint or Chromium) is missing or failed.',
     5: 'Network or fetch error.',
     6: 'Warnings were raised and --strict was given; the output was still written.',
 };
@@ -509,4 +509,116 @@ export function exportOnSaveReason(
     }
     if (optsOutOfExportOnSave(text)) { return 'This document sets Export On Save: false'; }
     return null;
+}
+
+
+// ── Runtime dependencies ──────────────────────────────────────────────────────
+
+/** Something an export needs on this machine, and whether it is there. */
+export interface Dependency {
+    /** `node`, or an id the CLI's `--check-setup --json` reports. */
+    id: string;
+    name: string;
+    installed: boolean;
+}
+
+/**
+ * The components in `--check-setup --json` output, or null when the output is
+ * not that report — a CLI too old to have the flag refuses it, and one that
+ * crashed says something else.
+ *
+ * Tolerates text around the object: the CLI prints it through its result line,
+ * which pads it with blank lines and an indent.
+ */
+export function parseSetupStatus(stdout: string): Dependency[] | null {
+    const start = stdout.indexOf('{');
+    const end   = stdout.lastIndexOf('}');
+    if (start < 0 || end < start) { return null; }
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(stdout.slice(start, end + 1));
+    } catch {
+        return null;
+    }
+    const components = (parsed as { components?: unknown } | null)?.components;
+    if (!Array.isArray(components)) { return null; }
+    const valid = components.every((c: unknown) => {
+        const d = c as Partial<Dependency> | null;
+        return typeof d?.id === 'string' && typeof d.name === 'string' && typeof d.installed === 'boolean';
+    });
+    return valid ? (components as Dependency[]) : null;
+}
+
+/**
+ * Everything to check when Node.js itself is missing, so the CLI cannot be asked.
+ *
+ * WeasyPrint and draw.io come from modules the extension loads in-process.
+ * Chromium's check needs playwright, and playwright needs a newer Node than the
+ * extension host of the oldest VS Code this extension supports, so it is listed
+ * as missing. That costs nothing when it is there: `--setup` then finds it
+ * installed and moves on.
+ */
+export function dependenciesWithoutNode(found: { weasyprint: boolean; drawio: boolean }): Dependency[] {
+    return [
+        { id: 'node',       name: 'Node.js',    installed: false },
+        { id: 'weasyprint', name: 'WeasyPrint', installed: found.weasyprint },
+        { id: 'chromium',   name: 'Chromium',   installed: false },
+        { id: 'drawio',     name: 'draw.io',    installed: found.drawio },
+    ];
+}
+
+/** "A", "A and B", "A, B and C". */
+export function joinNames(names: readonly string[]): string {
+    if (names.length <= 1) { return names.join(''); }
+    return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/** The one question the extension asks about dependencies, naming all of them. */
+export function dependencyPromptMessage(missing: readonly Dependency[]): string {
+    return `Platen Markdown Export needs ${joinNames(missing.map(d => d.name))} to export PDFs and render diagrams. `
+        + `Install ${missing.length === 1 ? 'it' : 'them'} now?`;
+}
+
+/**
+ * Whether to ask: something is missing that the user has not declined.
+ *
+ * "Don't ask again" is remembered per dependency rather than as one switch, so
+ * declining draw.io does not also silence the question the day Chromium goes
+ * missing — a playwright upgrade leaves the old browser behind, for one.
+ */
+export function shouldAskAboutDependencies(missing: readonly Dependency[], declined: readonly string[]): boolean {
+    return missing.some(d => !declined.includes(d.id));
+}
+
+/**
+ * What to tell the user when Node.js could not be installed, which stops
+ * everything else — the rest is installed by a CLI that runs on it.
+ *
+ * Linux gets a command rather than an install: `sudo` needs a terminal to ask
+ * for the password, and a process the extension starts has none.
+ */
+export function nodeInstallFailure(platform: NodeJS.Platform): { message: string; command?: string } {
+    const lead = 'Platen Markdown Export could not install Node.js, which everything else it needs runs on.';
+    if (platform === 'win32') {
+        return { message: `${lead} Install it from https://nodejs.org (tick "Add to PATH"), then restart VS Code.` };
+    }
+    if (platform === 'darwin') {
+        return { message: `${lead} Install it from https://nodejs.org, or install Homebrew (https://brew.sh) and try again.` };
+    }
+    return {
+        message: `${lead} Installing it needs administrator rights, which an extension cannot ask for. `
+            + 'Run the command in a terminal, then restart VS Code.',
+        command: 'sudo apt-get install -y nodejs npm',
+    };
+}
+
+/** The single message that ends an install. */
+export function installResultMessage(installed: readonly string[], failed: readonly string[]): string {
+    if (!failed.length) {
+        return installed.length
+            ? `Platen Markdown Export: installed ${joinNames(installed)}.`
+            : 'Platen Markdown Export: setup finished.';
+    }
+    const also = installed.length ? ` ${joinNames(installed)} ${installed.length === 1 ? 'was' : 'were'} installed.` : '';
+    return `Platen Markdown Export could not install ${joinNames(failed)}.${also} The output has the details.`;
 }

@@ -24,7 +24,7 @@ import { setQuiet } from '../logger';
 setQuiet(true);
 
 let dir: string;
-before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-cfg-')); });
+before(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-cfg-')); });
 after(()  => { fs.rmSync(dir, { recursive: true, force: true }); });
 
 /** Creates `sub/` under the scratch dir, with an optional config file in it. */

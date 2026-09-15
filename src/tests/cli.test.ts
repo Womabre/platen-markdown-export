@@ -260,6 +260,33 @@ describe('parseArgs --setup', () => {
     it('is false for a normal export', () => {
         assert.equal(parseArgs(['doc.md']).setup, false);
     });
+
+});
+
+describe('parseArgs --check-setup', () => {
+    it('is its own action: it never sets --setup, so nothing gets installed', () => {
+        const r = parseArgs(['--check-setup']);
+        assert.equal(r.checkSetup, true);
+        assert.equal(r.setup, false);
+        assert.equal(r.inputFile, '');
+        assert.equal(parseArgs(['--setup']).checkSetup, false);
+        assert.equal(parseArgs(['doc.md']).checkSetup, false);
+    });
+
+    it('carries --json, in either order', () => {
+        assert.equal(parseArgs(['--check-setup', '--json']).json, true);
+        assert.equal(parseArgs(['--json', '--check-setup']).json, true);
+        assert.equal(parseArgs(['--check-setup']).json, false);
+    });
+
+    it('takes no input file', () => {
+        assert.equal(exitOf('--check-setup', 'doc.md').exitCode, 2);
+    });
+
+    it('refuses to be combined with --setup or --clear-cache', () => {
+        assert.match(exitOf('--setup', '--check-setup').message, /--setup and --check-setup are separate actions/);
+        assert.equal(exitOf('--check-setup', '--clear-cache').exitCode, 2);
+    });
 });
 
 describe('parseArgs argv injection', () => {
@@ -721,7 +748,7 @@ describe('parseArgs --answers', () => {
     });
 
     it('reports malformed JSON as a usage error', () => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-answers-cli-'));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-answers-cli-'));
         try {
             const f = path.join(dir, 'a.json');
             fs.writeFileSync(f, '{ not json');
@@ -734,7 +761,7 @@ describe('parseArgs --answers', () => {
     });
 
     it('rejects a JSON array — the answers must be an object', () => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-answers-cli-'));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-answers-cli-'));
         try {
             const f = path.join(dir, 'a.json');
             fs.writeFileSync(f, '[1,2]');
@@ -747,7 +774,7 @@ describe('parseArgs --answers', () => {
     });
 
     it('prints the filled scaffold and exits 0', () => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-answers-cli-'));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-answers-cli-'));
         try {
             const f = path.join(dir, 'a.json');
             fs.writeFileSync(f, JSON.stringify({ title: 'Wizard Doc', author: 'W' }));
@@ -802,19 +829,19 @@ describe('resolveThemeRoots precedence', () => {
         // file somebody committed months ago.
         const roots = resolveThemeRoots(['/from-flag'],
                                         { EXPORT_THEME_PATH: '/from-env' },
-                                        path.join(os.tmpdir(), 'tmex-no-config-here'));
+                                        path.join(os.tmpdir(), 'pmex-no-config-here'));
         assert.deepEqual(roots.slice(0, 2), ['/from-flag', '/from-env']);
     });
 
     it('works with no flags at all — the case a CLI task hits', () => {
         // The reported failure: the extension passes --theme-path, a task does
         // not, and the same document then fails to resolve its theme.
-        const roots = resolveThemeRoots([], {}, path.join(os.tmpdir(), 'tmex-no-config-here'));
+        const roots = resolveThemeRoots([], {}, path.join(os.tmpdir(), 'pmex-no-config-here'));
         assert.deepEqual(roots, []);
     });
 
     it('picks up a config beside the document with no flags and no env', () => {
-        const d = fs.mkdtempSync(path.join(os.tmpdir(), 'tmex-cli-cfg-'));
+        const d = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-cli-cfg-'));
         try {
             fs.writeFileSync(path.join(d, 'platen-markdown-export.json'),
                              JSON.stringify({ themePaths: ['./brand'] }));
