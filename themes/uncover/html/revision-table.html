@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+  revision-table.html — Revision history table template for the default theme.
+  ─────────────────────────────────────────────────────────────────────────
+  Template token (replaced at export time):
+    {{REVISION_ROWS}}   One or more <tr> blocks for each revision entry
+
+  Only the <table> fragment is used during export; loadHtmlTemplate() strips
+  the head/shell.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revision table preview</title>
+  <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/cover.css">
+</head>
+<body>
+
+<table class="revision-table">
+  <thead>
+    <tr>
+      <th>Rev.</th>
+      <th>Date</th>
+      <th>Author</th>
+      <th>Comments</th>
+    </tr>
+  </thead>
+  <tbody id="revision-tbody"><!--{{REVISION_ROWS}}--></tbody>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,329 @@
+@page cover {
+    margin: 0;
+    @top-left      { content: ''; }
+    @top-right     { content: ''; }
+    @bottom-left   { content: ''; }
+    @bottom-center { content: ''; }
+    @bottom-right  { content: ''; }
+}
+
+.cover-page {
+    page: cover;
+    /* Full sheet, edge to edge: @page cover sets margin: 0. Driven by the
+       `Page Size` frontmatter (buildPageMetricsCss) so a larger sheet does not
+       leave the cover squeezed into an A4-sized corner; the fallbacks keep A4
+       for any path that does not emit the vars. */
+    width: var(--page-width, 210mm);
+    height: var(--page-height, 297mm);
+    page-break-after: always;
+    padding: 20mm 20mm 10mm 20mm;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.cover-title {
+    color: var(--cover-title-color, #ffffff);
+    font-size: 32pt;
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 700;
+    margin: 0 0 24px 0;
+    padding-bottom: 16px;
+    line-height: 1.2;
+    border-bottom-style: solid;
+    border-bottom-width: 5px;
+    border-bottom-color: var(--cover-title-color, rgba(255,255,255,1));
+}
+
+/* ── Middle section (logo + revision table) ──────────────── */
+.cover-middle {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ── Cover logo ───────────────────────────────────────── */
+#cover-logo-slot {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    max-height: 60mm;
+    overflow: visible;
+}
+
+#revision-table-slot {
+    flex-shrink: 0;
+}
+
+/* The wrapper is a single element — no pseudo-elements, no seam.
+   padding-right: 210mm extends the background box off the right page edge.
+   margin-right: -210mm cancels the layout effect so flex centering still
+   places the logo near the horizontal centre of the page.
+   flex-shrink: 0 prevents flexbox from compressing the padding back.
+   WeasyPrint clips the overflowing paint at the physical page boundary. */
+.cover-logo-wrapper {
+    display: flex;
+    align-items: center;
+    border-radius: 5mm 0 0 5mm;  /* round left side only; right bleeds off page */
+    /* The right padding must outrun the sheet so the panel bleeds off its edge,
+       and the negative margin cancels that padding's effect on layout so flex
+       still centres the logo. Both track the page width. */
+    padding: 5mm var(--page-width, 210mm) 5mm 5mm;
+    margin-right: calc(-1 * (var(--page-width, 210mm) - 9.25mm));
+    flex-shrink: 0;
+}
+
+.cover-logo-wrapper img {
+    min-height: 30mm;
+    max-height: 50mm;
+    min-width: 40mm;
+    max-width: 120mm;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+/* ── Revision table ─────────────────────────────────────── */
+/* All !important needed — theme.css general table rules bleed in via WeasyPrint */
+/* Cover tables (this one and the document-info rows) use the body font, like
+   the tables in the document; the title, subtitle and address keep the heading font. */
+.revision-table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-family: var(--font-body, sans-serif);
+    font-size: 9pt !important;
+    color: rgba(255,255,255,0.9) !important;
+    margin: 0 !important;
+    background-color: transparent !important;
+}
+
+.revision-table tr {
+    background-color: transparent !important;
+}
+
+.revision-table th,
+.revision-table td {
+    font-family: var(--font-body, sans-serif) !important;
+    padding: 6px 12px !important;
+    text-align: left;
+    border: none !important;
+    border-bottom: 0.1em solid rgba(255,255,255,0.2) !important;
+    background-color: transparent !important;
+    color: rgba(255,255,255,0.9) !important;
+}
+
+.revision-table td.rev-remarks {
+    /* Long remarks wrap at word boundaries; a value split mid-word reads as a
+       typo, and an author name broken across lines is worse than a short line. */
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+}
+
+.revision-table thead tr {
+    background-color: transparent !important;
+}
+
+.revision-table thead th {
+    font-family: var(--font-body, sans-serif) !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.05em !important;
+    color: rgba(255,255,255,0.55) !important;
+    border-bottom: 0.15em solid rgba(255,255,255,0.35) !important;
+    padding-bottom: 8px !important;
+}
+
+.revision-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.rev-center {
+    text-align: center !important;
+    font-family: var(--font-body, sans-serif) !important;
+    width: 2em;
+}
+
+/* ── Bottom bar ─────────────────────────────────────────── */
+.cover-bottom {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 80mm;
+    flex-shrink: 0;
+}
+
+.cover-bottom-top,
+.cover-bottom-bottom {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 40mm;
+}
+
+.cover-info-table {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 16px;
+    row-gap: 4px;
+}
+
+.cover-info-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 9pt;
+    font-family: var(--font-body, sans-serif);
+    white-space: nowrap;
+}
+
+.cover-info-value {
+    color: rgba(255,255,255,0.9);
+    font-size: 9pt;
+    font-family: var(--font-body, sans-serif);
+    white-space: nowrap;
+}
+
+.cover-slogan {
+    color: rgba(255,255,255,0.8);
+    font-size: 10pt;
+    font-family: var(--font-heading, sans-serif);
+    margin: 0;
+}
+
+.cover-bottom-bottom img {
+    height: 40px;
+    width: auto;
+}
+
+.cover-address {
+    text-align: right;
+    color: rgba(255,255,255,0.7);
+    font-size: 9pt;
+    font-family: var(--font-heading, sans-serif);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   default: "L4 Navy Panel" cover
+   A solid brand-navy panel on the left carries the logo, two-tier headline
+   and document info in white; the hero photo is revealed through a clean
+   circular window on the right, ringed in white.
+   ───────────────────────────────────────────────────────────────────────── */
+.cover-l4.cover-page {
+    display: block;
+    position: relative;
+    padding: 24mm 22mm 26mm 24mm;
+    background-color: var(--brand-main);
+    /* solid navy panel with a gentle diagonal sheen for depth */
+    background-image:
+        linear-gradient(152deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 44%, rgba(0,0,0,0.34) 100%) !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+/* photo medallion — a large white-ringed circle that bleeds off the right
+   edge. The whole (square-cropped) image is fitted to the circle, so it reads
+   at full scale rather than a zoomed sub-region; the page edge simply clips
+   the off-page portion of the circle. */
+.cover-l4-photo {
+    position: absolute;
+    top: 31mm; left: 116mm;
+    width: 200mm; height: 200mm;
+    border-radius: 50%;
+    border: 1.3mm solid rgba(255,255,255,0.85);
+    background-image: var(--cover-photo);
+    background-size: cover;
+    background-position: var(--cover-photo-pos-x, 50%) center;
+    background-repeat: no-repeat;
+    z-index: 1;
+}
+
+/* Left column: logo (top) · headline (middle) · info (bottom) — all on navy. */
+.cover-l4-panel {
+    position: relative;
+    z-index: 2;
+    width: 46%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.cover-l4-head { display: flex; align-items: center; gap: 5mm; }
+.cover-l4-logo img,
+.cover-l4-logo svg {
+    height: 15mm;
+    width: auto;
+    max-width: 70mm;
+    display: block;
+}
+
+.cover-l4-mid { flex: 1; display: flex; align-items: center; }
+
+.cover-l4 .cover-title {
+    color: var(--cover-title-color, #ffffff);
+    font-size: 44pt;
+    line-height: 1.02;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+}
+.cover-l4 .cover-title::before { content: none; display: none; }
+.cover-l4 .cover-subtitle {
+    color: var(--cover-title-color, rgba(255,255,255,0.82));
+    font-family: var(--font-heading, sans-serif);
+    font-size: 20pt;
+    font-weight: 300;
+    line-height: 1.15;
+    margin: 4mm 0 0 0;
+}
+.cover-l4 .cover-subtitle:empty { display: none; }
+.cover-l4-rule { display: block; width: 38mm; height: 1.4mm; background: rgba(255,255,255,0.9); margin-top: 8mm; }
+
+.cover-l4-foot { display: flex; flex-direction: column; gap: 4mm; }
+.cover-l4-eyebrow {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 8pt; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin: 0 0 1mm 0;
+}
+
+/* document-info table — light on the navy panel */
+.cover-l4 .cover-info-label { color: rgba(255,255,255,0.6); }
+.cover-l4 .cover-info-value { color: #ffffff; font-weight: 600; }
+.cover-l4 .cover-address { text-align: left; color: rgba(255,255,255,0.82); }
+
+/* revision table — compact; the base white-on-transparent styling suits navy */
+.cover-l4-rev .revision-table { font-size: 7.5pt !important; }
+.cover-l4-rev .revision-table th,
+.cover-l4-rev .revision-table td { padding: 4px 8px !important; }
+
+/* cover logo: white plaque on the panel's left text column, a paired mark below the brand logo — echoes the theme's white ring/rule accents */
+.cover-l4-cover {
+    position: absolute;
+    top: 60mm;
+    left: 24mm;
+    z-index: 2;
+}
+.cover-l4-cover .cover-logo-wrapper {
+    display: inline-block;
+    /* pill colour comes from the frontmatter Background (inline style); absent → transparent */
+    padding: 4mm 8mm;
+    margin: 0;
+    border-radius: 40mm;
+}
+.cover-l4-cover .cover-logo-wrapper img { min-height: 0; min-width: 0; max-height: 12mm; max-width: 56mm; width: auto; height: auto; display: block; }
+
+/* `Cover Slogan: false` / `Cover Address: false` empty the slot rather than
+   remove the element, so collapse it and let the layout close up. */
+.cover-slogan:empty,
+.cover-address:empty { display: none; }

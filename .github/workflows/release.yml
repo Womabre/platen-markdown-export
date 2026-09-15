@@ -1,0 +1,164 @@
+name: Release
+
+# Cutting a release was entirely manual: bump two package.json files by hand,
+# hope nothing drifted, build a .vsix locally, upload it somewhere. This runs the
+# same gates CI does, plus the end-to-end PDF check, and only then publishes.
+#
+# Trigger by pushing a tag:  git tag v1.1.0 && git push origin v1.1.0
+# (`npm run version:set -- 1.1.0` sets every version the tag has to match.)
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build and verify without publishing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write        # needed to create the GitHub Release
+  # `npm publish --provenance` mints a signed attestation from GitHub's OIDC
+  # token, which needs this scope. Without it the publish step fails — and
+  # nothing caught that, because the step is skipped when NPM_TOKEN is unset,
+  # so every dry run went green over a release that could not have published.
+  id-token: write
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+
+      # The tag has to name the version that is about to ship.
+      - run: npm run check:versions
+
+      # ...and someone has to have written down what is in it. Without this a
+      # release could ship with everything still under "## [Unreleased]".
+      - run: npm run check:changelog
+      - name: Tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p 'require("./package.json").version')"
+          [ "$TAG" = "$PKG" ] || { echo "::error::tag $GITHUB_REF_NAME does not match package.json $PKG"; exit 1; }
+
+      - name: Install WeasyPrint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends weasyprint
+
+      # Every shipped theme, matching ci.yml. A release gate weaker than the
+      # pull-request gate is the wrong way round.
+      - name: Export a PDF through every theme and assert each is real
+        # --require so a runner with no WeasyPrint fails instead of skipping.
+        run: node scripts/verify-pdf-export.js --all-themes --require
+
+  # macOS came off the per-commit CI matrix because a macOS runner bills at ten
+  # times the Linux rate for the same suite (840 of 2,000 monthly minutes). It
+  # belongs on the path to a release, though: nothing should ship having never
+  # run on it. One job, on a tag, a few times a year.
+  macos:
+    name: lint + test (macos-latest)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  package:
+    name: package
+    needs: [verify, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Build the npm tarball
+        run: npm pack --pack-destination dist-artifacts
+
+      # The extension bundles its own copy of the CLI, so this must run after the
+      # root build. `bundle.js` prunes and skips symlinked themes on its own.
+      #
+      # One .vsix per platform rather than a single universal build. sharp ships
+      # a ~18 MB native binary per platform, and the universal bundle carried all
+      # five: an 80.5 MB download of which 35.3 MB was any given user's. VS Code
+      # has first-class support for platform-specific extensions and resolves the
+      # matching target itself, so nobody has to pick.
+      #
+      # `bundle.js` smoke-tests each bundle by exporting a real document with it
+      # before narrowing to the target, so a build that pruned too much fails
+      # here rather than on someone's machine.
+      - name: Build a .vsix per platform
+        working-directory: vscode-extension
+        run: |
+          npm ci
+          npm run compile
+          npm run lint
+          for target in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
+            echo "::group::$target"
+            npm run bundle -- --target "$target"
+            npx vsce package --no-dependencies --target "$target" \
+              --out "../dist-artifacts/platen-markdown-export-$target.vsix"
+            echo "::endgroup::"
+          done
+          ls -lh ../dist-artifacts/
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-artifacts
+          path: dist-artifacts/*
+
+      - name: Create the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          files: dist-artifacts/*
+          generate_release_notes: true
+
+      # Publishing is opt-in: without an NPM_TOKEN secret the run still produces
+      # the artifacts, so the workflow is usable before anyone decides this
+      # belongs on the registry.
+      #
+      # The emptiness test is in the script, not in `if:`. The `secrets` context
+      # is not available to a step-level condition, and referencing it there does
+      # not fail the step — it makes the whole workflow file invalid, which is why
+      # every push to main has been showing a 0-second "workflow file issue"
+      # failure for this file since it was added.
+      - name: Publish to npm
+        if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "No NPM_TOKEN secret set — skipping the registry publish."
+            echo "The GitHub Release and its artifacts are unaffected."
+            exit 0
+          fi
+          npm publish --provenance --access public

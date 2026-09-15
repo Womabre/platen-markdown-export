@@ -1,0 +1,239 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    # A commit that only touches prose cannot fail a test. Skipping those is
+    # worth real money here: every run costs eight jobs, and a docs-only push
+    # paid for all of them. A commit touching code *and* docs still runs — a
+    # path filter only skips when every changed file matches.
+    # (Repeated below rather than shared with a YAML anchor: the workflow
+    # parser does not support anchors.)
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+  # Carries the macOS leg below, weekly rather than per-commit.
+  schedule:
+    - cron: '23 6 * * 1'    # Mondays, 06:23 UTC — its own minute, clear of the other crons
+  workflow_dispatch:
+
+# Pushing three commits in a row started three full matrices and let the
+# superseded two run to completion. Only the newest commit's answer matters.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every job here only reads the repository. Declaring that at the top level
+# replaces whatever the repository default happens to be — which for an older
+# repo is read/write on every scope, handed to each of the third-party actions
+# and every `npm ci` postinstall script this workflow runs. release.yml asks for
+# more because it actually publishes; nothing in CI does.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: lint + test (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux carries the Node version spread: package.json declares
+        # engines.node >= 20.9, so the floor and current LTS both get exercised.
+        # The floor moved off 18 when sharp 0.35 did — see the CHANGELOG.
+        #
+        # Windows and macOS carry one version each. What they are here for is not
+        # the language level but the platform-specific code, which the Linux legs
+        # cannot reach at all: bootstrap.ts's installer branches, openCommand()'s
+        # PowerShell path, the per-platform icon-cache directory, and every place
+        # a path separator or a case-insensitive filesystem could bite.
+        include:
+          - { os: ubuntu-latest,  node: '20' }
+          - { os: ubuntu-latest,  node: '22' }
+          - { os: windows-latest, node: '22' }
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      # `pretest` builds first. No WeasyPrint, Chromium or network access is
+      # needed: the suite is self-contained and fetch tests run against a
+      # local HTTP server.
+      - run: npm test
+
+  macos:
+    name: lint + test (macos-latest, node 22)
+    # Split out of the matrix above and off the per-commit path, because a macOS
+    # runner bills at TEN times the Linux rate and every job is rounded up to a
+    # whole minute: this 26-second suite cost 10 minutes a push — 840 of the 2,000
+    # monthly minutes, 46% of the bill, to re-run what Linux had just run. The
+    # platform is still covered: weekly here, before every release in release.yml,
+    # and end-to-end (install, then export) by setup.yml.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm test
+
+  coverage:
+    name: coverage floor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          # --test-coverage-lines and friends are Node 22+; the thresholds are
+          # the point, so this job does not run on the older legs.
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # A ratchet, not a target. The floors sit just under the measured numbers
+      # so a real drop fails the build while ordinary refactoring does not.
+      # Raise them when the true figure moves up; never lower them to go green.
+      - run: npm run test:coverage
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Production dependencies only: a advisory in a dev-only toolchain does not
+      # ship to anyone, and failing the build on it teaches people to ignore this
+      # job. Dependabot (see .github/dependabot.yml) opens the PRs; this is the
+      # gate that stops a high-severity one reaching a release unnoticed.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  pdf:
+    name: end-to-end PDF export
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # Debian's package pulls in Pango/Cairo/GDK-Pixbuf, so no pip or GTK
+      # bootstrap is needed here. No Chromium: the fixture has no Mermaid.
+      - name: Install WeasyPrint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends weasyprint
+          weasyprint --version
+
+      # Every shipped theme, not just the default one. cover.test.ts asserts each
+      # theme's cover TEMPLATE carries the right token slots, but a template can
+      # hold every slot and still fail to lay out — and only one theme was ever
+      # actually rendered on a commit. The fixture has no Mermaid, draw.io,
+      # images or icon fonts, so twelve renders cost seconds and need no network.
+      - name: Export a PDF through every theme and assert each is real
+        # --require: never skip. The script degrades to a skip on a machine with
+        # no WeasyPrint so `npm run check` works for a contributor who has never
+        # run --setup; a runner that skipped it would verify nothing and go green.
+        run: node scripts/verify-pdf-export.js --all-themes --require
+
+  package:
+    name: package contents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # The extension ships its own copy of the CLI; nothing else asserts the
+      # two versions agree, and a stale bundle would publish silently.
+      - run: npm run check:versions
+
+      # Also run at release time — but that is after the tag is pushed, so a
+      # missing section meant deleting and re-pushing a tag. Here it fails the
+      # moment `version:set` bumps a version whose section nobody has written
+      # yet, which is while there is still something cheap to do about it.
+      - run: npm run check:changelog
+
+      # Nothing in CI compiled the extension. Only release.yml did, so a
+      # TypeScript error in extension.ts reached main and was found while
+      # cutting a release — and its `lint` script had never run anywhere,
+      # because eslint was missing from its devDependencies.
+      #
+      # `npm test` here covers `src/core.ts`: the extension's editor-free logic —
+      # what makes a save trigger an export, and whether a discovered
+      # `dist/index.js` may be run. `extension.ts` imports `vscode` at its top
+      # and so cannot be loaded outside the editor host, which is why that logic
+      # lives in its own module.
+      - name: Compile, lint and test the VS Code extension
+        working-directory: vscode-extension
+        run: |
+          npm ci
+          npm run compile
+          npm run lint
+          npm test
+
+      # The other half: the extension host. `npm test` above covers `core.ts`,
+      # which is everything decidable without an editor — but not whether the
+      # commands are actually registered under the ids the manifest promises, or
+      # whether the wizard's five prompts end in the document they describe.
+      # That was checked by a human pressing F5, which is the slowest test here
+      # and the one most likely to be skipped.
+      #
+      # `xvfb-run` because VS Code is an Electron app and the runner is headless.
+      # The editor is downloaded once and cached by @vscode/test-electron; on a
+      # developer's machine the launcher reuses an installed VS Code instead.
+      - name: Run the extension-host integration tests
+        working-directory: vscode-extension
+        run: xvfb-run -a npm run test:integration
+
+      # `dist/` is gitignored, so the published `bin` target depends entirely on
+      # the `files` allowlist plus the prepack build. Assert the tarball really
+      # carries the binary and none of the heavy rendered samples.
+      - name: Verify the tarball contents
+        run: |
+          npm pack --dry-run 2>&1 | tee /tmp/pack.txt
+          grep -q 'dist/index.js'            /tmp/pack.txt || { echo '::error::bin target dist/index.js missing from package'; exit 1; }
+          ! grep -qE 'sample .*_Rev[0-9]+\.(html|pdf)' /tmp/pack.txt || { echo '::error::rendered sample outputs leaked into package'; exit 1; }
+          ! grep -q 'dist/tests/'            /tmp/pack.txt || { echo '::error::tests leaked into package'; exit 1; }

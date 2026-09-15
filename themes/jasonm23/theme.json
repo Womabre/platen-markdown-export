@@ -1,0 +1,58 @@
+{
+    "name": "JasonM23",
+    "slogan": "",
+    "address": [],
+    "background": "",
+    "logo": "logos/fountain-pen-nib-svgrepo-com.svg",
+    "logoWhite": "logos/fountain-pen-nib-svgrepo-com-white.svg",
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+    "fonts": [],
+    "fontFamily": {
+        "body": "Georgia, Palatino, serif",
+        "heading": "Georgia, Palatino, serif"
+    },
+    "defaultPalette": "Dark",
+    "palettes": {
+        "Dark":     { "extraLight": "#e7f5f6", "light": "#a0d9da", "main": "#61bfc1", "regular": "#57acae", "medium": "#81cccd", "dark": "#448687", "extraDark": "#2c5657" },
+        "Foghorn":  { "extraLight": "#e0e0e0", "light": "#858585", "main": "#333333", "regular": "#2e2e2e", "medium": "#5c5c5c", "dark": "#242424", "extraDark": "#171717" },
+        "Markdown": { "extraLight": "#dbdbdb", "light": "#707070", "main": "#111111", "regular": "#0f0f0f", "medium": "#414141", "dark": "#0c0c0c", "extraDark": "#080808" },
+        "Swiss":    { "extraLight": "#d9d9d9", "light": "#666666", "main": "#000000", "regular": "#000000", "medium": "#333333", "dark": "#000000", "extraDark": "#000000" }
+    },
+    "styles": {
+        "none": { "palette": "Dark", "overlay": [1, 1] },
+        "Dark": {
+            "palette": "Dark",
+            "overlay": [0.92, 1],
+            "background": "#000000",
+            "fontFamily": { "body": "Georgia, Palatino, serif", "heading": "Georgia, Palatino, serif" },
+            "cssVars": { "--Grey-dark": "#eeeeee", "--link-color": "#61bfc1", "--code-bg": "#1a1a1a", "--table-stripe": "#161616", "--table-rule": "#333333" }
+        },
+        "Foghorn": {
+            "palette": "Foghorn",
+            "overlay": [0.92, 1],
+            "fontFamily": { "body": "Vollkorn, Palatino, \"Times New Roman\", serif", "heading": "Vollkorn, Palatino, \"Times New Roman\", serif" },
+            "fontImport": "https://fonts.googleapis.com/css2?family=Vollkorn:ital,wght@0,400;0,700;1,400;1,700&display=swap",
+            "cssVars": { "--Grey-dark": "#333333", "--link-color": "#2484c1" }
+        },
+        "Markdown": {
+            "palette": "Markdown",
+            "overlay": [0.92, 1],
+            "fontFamily": { "body": "Georgia, Palatino, \"Palatino Linotype\", Times, \"Times New Roman\", serif", "heading": "Georgia, Palatino, \"Palatino Linotype\", Times, \"Times New Roman\", serif" },
+            "cssVars": { "--Grey-dark": "#444444", "--link-color": "#0645ad" }
+        },
+        "Swiss": {
+            "palette": "Swiss",
+            "overlay": [0.92, 1],
+            "fontFamily": { "body": "Helvetica, Arial, Freesans, sans-serif", "heading": "Helvetica, Arial, Freesans, sans-serif" },
+            "cssVars": { "--Grey-dark": "#333333", "--link-color": "#4183c4", "--code-bg": "#f8f8f8" }
+        }
+    }
+}

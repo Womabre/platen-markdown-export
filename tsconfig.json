@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    // Incremental rebuilds: `npm test` runs `pretest` (a full build) every time,
+    // and the whole project was recompiled to run one changed test file. The
+    // build info lands in dist/, which is already gitignored and excluded from
+    // the published tarball.
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "outDir": "./dist",
+    "rootDir": "src",
+  },
+  "include": ["src"]
+}

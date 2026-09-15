@@ -1,0 +1,44 @@
+{
+    "name": "Default",
+    "slogan": "",
+    "address": [],
+
+    "logo": "logos/logo.svg",
+    "logoWhite": "logos/logo-white.svg",
+
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+
+    "fonts": [],
+    "fontFamily": {
+        "body": "\"Helvetica Neue\", Arial, \"Hiragino Kaku Gothic ProN\", \"Hiragino Sans\", Meiryo, sans-serif",
+        "heading": "\"Helvetica Neue\", Arial, \"Hiragino Kaku Gothic ProN\", \"Hiragino Sans\", Meiryo, sans-serif"
+    },
+
+    "defaultPalette": "Navy",
+    "palettes": {
+        "Navy":  { "extraLight": "#dbe7f3", "light": "#4488cc", "main": "#224466", "regular": "#2f5680", "medium": "#3a6fa3", "dark": "#16304a", "extraDark": "#0d1d2e" },
+        "Grey":  { "extraLight": "#f4f5f7", "light": "#e4e7eb", "main": "#1f2933", "regular": "#7b8794", "medium": "#9aa5b1", "dark": "#3e4c59", "extraDark": "#111827" },
+        "Blue":  { "extraLight": "#dbeafe", "light": "#93c5fd", "main": "#2563eb", "regular": "#3b82f6", "medium": "#60a5fa", "dark": "#1d4ed8", "extraDark": "#1e3a8a" },
+        "Green": { "extraLight": "#dcfce7", "light": "#86efac", "main": "#16a34a", "regular": "#22c55e", "medium": "#4ade80", "dark": "#15803d", "extraDark": "#14532d" },
+        "Amber": { "extraLight": "#fef3c7", "light": "#fcd34d", "main": "#b45309", "regular": "#d97706", "medium": "#f59e0b", "dark": "#92400e", "extraDark": "#78350f" },
+        "Red":   { "extraLight": "#fee2e2", "light": "#fca5a5", "main": "#dc2626", "regular": "#ef4444", "medium": "#f87171", "dark": "#b91c1c", "extraDark": "#7f1d1d" }
+    },
+
+    "styles": {
+        "none":  { "palette": "Navy",  "overlay": [1, 1] },
+        "Navy":  { "palette": "Navy",  "overlay": [0.92, 1] },
+        "Grey":  { "palette": "Grey",  "overlay": [0.92, 1] },
+        "Blue":  { "palette": "Blue",  "overlay": [0.92, 1] },
+        "Green": { "palette": "Green", "overlay": [0.92, 1] },
+        "Amber": { "palette": "Amber", "overlay": [0.92, 1] },
+        "Red":   { "palette": "Red",   "overlay": [0.92, 1] }
+    }
+}

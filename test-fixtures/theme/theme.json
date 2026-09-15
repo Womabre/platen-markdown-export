@@ -1,0 +1,54 @@
+{
+    "// purpose": "Test-only fixture with full manifest capability parity with a complete brand package (image style, slogan/address, named logos, split fonts, paletteRoles, paletteNames) so the unit-test suite doesn't need a shipped theme to exercise those code paths. Lives outside themes/ so it never appears in listThemes()/--theme, and outside src/ so it survives untouched from src to dist.",
+
+    "name": "Test Fixture",
+    "slogan": "Fixture slogan for tests.",
+    "address": ["1 Fixture Way", "Test City, TS 00000"],
+
+    "logo": "logos/logo.svg",
+    "logoWhite": "logos/logo-white.svg",
+
+    "css": {
+        "stylesheet": "../../themes/default/css/theme.css",
+        "page": "../../themes/default/css/page.css",
+        "cover": "../../themes/default/css/cover.css"
+    },
+    "html": {
+        "cover": "../../themes/default/html/cover-page.html",
+        "revision": "../../themes/default/html/revision-table.html"
+    },
+
+    "fonts": [
+        { "name": "Fixture Body",    "url": "https://example.invalid/fixture-body.woff2",    "family": "fixture-body-sans",    "weight": 400 },
+        { "name": "Fixture Heading", "url": "https://example.invalid/fixture-heading.woff2", "family": "fixture-heading-serif", "weight": 700 }
+    ],
+    "fontFamily": {
+        "body": "\"fixture-body-sans\", sans-serif",
+        "heading": "\"fixture-heading-serif\", serif"
+    },
+
+    "logos": {
+        "Alt": "logos/alt-logo.svg"
+    },
+
+    "paletteRoles": {
+        "Muted": { "main": "medium", "light": "light" }
+    },
+
+    "paletteNames": {
+        "Muted": { "slug": "quiet", "aliases": ["MutedUpstream"] }
+    },
+
+    "defaultPalette": "Brand",
+    "palettes": {
+        "Brand": { "extraLight": "#eef2ff", "light": "#a5b4fc", "main": "#6366f1", "regular": "#818cf8", "medium": "#4f46e5", "dark": "#3730a3", "extraDark": "#1e1b4b" },
+        "Muted": { "extraLight": "#f5f5f4", "light": "#d6d3d1", "main": "#a8a29e", "regular": "#78716c", "medium": "#57534e", "dark": "#292524", "extraDark": "#1c1917" }
+    },
+
+    "styles": {
+        "none":     { "palette": "Brand", "overlay": [1, 1] },
+        "Hero":     { "image": "hero/photo.png", "position": 0.3, "palette": "Brand", "overlay": [0.7, 1] },
+        "Borrowed": { "palette": "Brand", "overlay": [0.6, 1] },
+        "Muted":    { "palette": "Muted", "overlay": [0.6, 1] }
+    }
+}

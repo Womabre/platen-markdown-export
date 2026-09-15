@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+  cover-page.html — "L6 Full-bleed" cover for the gaia theme.
+  ─────────────────────────────────────────────────────────
+  A full-bleed hero photo under a dark top-and-bottom gradient. Brand logo +
+  wordmark and tagline top, an oversized two-tier headline with an accent rule
+  mid-left, and the document info / revision history framed along the bottom.
+
+  Template tokens (replaced at export time):
+    {{COVER_TITLE_MAIN}}  Primary title line (before a separating dash/colon)
+    {{COVER_SUBTITLE}}    Subtitle (after the separator), or empty
+    {{COVER_INFO_ROWS}}   Zero or more <span> pairs for the info table
+    {{COVER_ADDRESS}}     Company address lines joined with <br>
+    {{COVER_SLOGAN}}      Company slogan / tagline text
+    {{LOGO_IMG}}    White brand logo <img>, or empty string
+    {{REVISION_TABLE}}    Full <table> fragment (revision history), or empty
+    {{COVER_LOGO_IMG}} Wrapped <img> for the cover logo, or empty string
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cover page preview</title>
+  <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/cover.css">
+</head>
+
+<body>
+
+  <div class="cover-page cover-l6" id="cover-page">
+    <div class="cover-l6-top">
+      <div class="cover-l6-brand">
+        <span class="cover-l6-logo">{{LOGO_IMG}}</span>
+      </div>
+      <p class="cover-slogan">{{COVER_SLOGAN}}</p>
+    </div>
+    <div class="cover-l6-mid">
+      <div>
+        <h1 class="cover-title">{{COVER_TITLE_MAIN}}</h1>
+        <p class="cover-subtitle">{{COVER_SUBTITLE}}</p>
+        <span class="cover-l6-rule"></span>
+      </div>
+    </div>
+    <div class="cover-l6-bottom">
+      <p class="cover-l6-eyebrow">Document details</p>
+      <div class="cover-l6-meta">
+        {{COVER_INFO_ROWS}}
+        <p class="cover-address">{{COVER_ADDRESS}}</p>
+      </div>
+      <div class="cover-l6-rev">{{REVISION_TABLE}}</div>
+    </div>
+    <div class="cover-l6-cover">{{COVER_LOGO_IMG}}</div>
+  </div>
+
+</body>
+
+</html>

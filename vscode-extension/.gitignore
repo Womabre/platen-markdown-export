@@ -1,0 +1,8 @@
+node_modules/
+out/
+bundled/
+*.vsix
+
+# @vscode/test-electron's download + profile cache for `npm run test:integration`.
+# Nearly a gigabyte, and re-created on demand.
+.vscode-test/

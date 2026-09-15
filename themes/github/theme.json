@@ -1,0 +1,52 @@
+{
+    "name": "GitHub",
+    "slogan": "",
+    "address": [],
+    "logo": "logos/github-142-svgrepo-com.svg",
+    "logoWhite": "logos/github-142-svgrepo-com-white.svg",
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+    "fonts": [],
+    "fontFamily": {
+        "body": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif",
+        "heading": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif"
+    },
+    "fontSize": {
+        "h1": "2em", "h2": "1.5em", "h3": "1.25em", "h4": "1em", "h5": "0.875em", "h6": "0.85em"
+    },
+    "defaultPalette": "GitHub",
+    "palettes": {
+        "GitHub": {
+            "extraLight": "#dedfe0",
+            "light": "#7c7f82",
+            "main": "#24292e",
+            "regular": "#202529",
+            "medium": "#505458",
+            "dark": "#191d20",
+            "extraDark": "#101215"
+        }
+    },
+    "styles": {
+        "none": {
+            "palette": "GitHub",
+            "overlay": [
+                1,
+                1
+            ]
+        },
+        "GitHub": {
+            "palette": "GitHub",
+            "overlay": [
+                0.92,
+                1
+            ]
+        }
+    }
+}

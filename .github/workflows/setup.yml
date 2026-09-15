@@ -1,0 +1,52 @@
+name: Runtime setup (Windows + macOS)
+
+# `--setup` is the most fragile code in the repo and the least exercised: the
+# Windows branch downloads WeasyPrint's standalone zip and falls back to Python
+# + pip, the macOS branch drives Homebrew, and CI only ever installed WeasyPrint
+# from Debian's package on Linux. Nothing on a commit touched either path.
+#
+# Deliberately NOT on push/pull_request: it downloads a Chromium and a WeasyPrint
+# build per run, so it is slow and depends on two third-party hosts being up.
+# Weekly plus on demand is the right cadence for catching an upstream URL that
+# has moved or an installer that has stopped working — without making every PR
+# wait on the network.
+on:
+  schedule:
+    # Monthly, not weekly: this is the only workflow that pays for a macOS
+    # runner (20 billed minutes a run, ten times the Linux rate) and it
+    # smoke-tests installer paths that change a few times a year.
+    - cron: '17 4 1 * *'    # the 1st of each month, 04:17 UTC
+  workflow_dispatch:
+
+jobs:
+  setup:
+    name: --setup then export (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # The real installer, on the real platform. Chromium and draw.io failures
+      # are warnings inside runBootstrap by design (a document without diagrams
+      # needs neither); a WeasyPrint failure exits non-zero, which is the thing
+      # this job exists to catch.
+      - name: Install runtime dependencies
+        run: node dist/index.js --setup
+
+      # Proves the installed binary actually runs and produces a real PDF —
+      # `--setup` already smoke-tests `weasyprint --version`, but only an export
+      # exercises the native library loading that the Windows GTK problem breaks.
+      - name: Export a PDF and assert it is real
+        run: node scripts/verify-pdf-export.js --require

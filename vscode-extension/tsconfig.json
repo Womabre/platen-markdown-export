@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    // Named explicitly, mirroring the root tsconfig. TypeScript 7 stops pulling
+    // in every @types package it can find, so relying on that default left
+    // `process`, `Buffer` and the `NodeJS` namespace undeclared the moment this
+    // was briefly built with 7. It is back on 6 with the CLI (typescript-eslint
+    // peers `<6.1.0`), and this stays: it is correct on both, and it is what
+    // makes the eventual upgrade a no-op here.
+    "types": ["node", "vscode"],
+    "outDir": "out",
+    "rootDir": "src",
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}

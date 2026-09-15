@@ -1,0 +1,83 @@
+version: 2
+
+# Three manifests drift independently and nothing was watching any of them: the
+# CLI's own dependencies (which include sharp and playwright — native builds
+# with real security surface), the VS Code extension's, and the pinned action
+# versions in the workflows.
+#
+# Grouped and weekly on purpose. Ungrouped daily updates on a repo this size
+# produce more PRs than anyone reads, and an ignored Dependabot is worse than
+# none — it trains you to close the security ones along with the noise.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the whole dev toolchain: these move together, break together,
+      # and are verified by the same `npm run lint && npm test`.
+      dev-dependencies:
+        dependency-type: development
+      # Patch and minor bumps of runtime deps in one PR; a major gets its own,
+      # because a markdown-it or sharp major is a real change to the output.
+      production-minor-patch:
+        dependency-type: production
+        update-types: [minor, patch]
+
+    # TypeScript 7 is held, and has to be held here rather than by hand.
+    # @typescript-eslint peers `typescript >=4.8.4 <6.1.0`; with TS 7 in the
+    # tree `npm ci` fails ERESOLVE before a single test runs. That was worked
+    # out once already (5ffe0ba, "hold TypeScript at 6") and reverted by hand —
+    # but nothing recorded the decision where Dependabot could see it, so the
+    # same unmergeable PR came back the following week and failed all eight CI
+    # jobs. A weekly red PR nobody can merge is exactly the noise this file's
+    # grouping was written to avoid.
+    #
+    # Minor and patch updates to TypeScript 6 still come through. Lift this when
+    # typescript-eslint ships TS 7 support.
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: npm
+    directory: /vscode-extension
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      extension-dependencies:
+        patterns: ['*']
+
+    # Two holds, for the same reason as the root manifest's: a grouped bump
+    # cannot be allowed to make a decision nobody took.
+    #
+    # TypeScript majors, because check:versions requires one compiler major
+    # across both manifests and the root is pinned by typescript-eslint's peer
+    # range. A grouped extension bump moved it to 7 on its own and turned the
+    # `package contents` job red.
+    #
+    # `@types/vscode` at all, because it is not really a dependency — it is the
+    # oldest VS Code the extension claims to support, and must track
+    # `engines.vscode`. Raising it drops every user below that version, which is
+    # a decision for a commit that says so. vsce refuses to package a mismatch;
+    # check:versions now catches it on a pull request instead of at release.
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: '@types/vscode'
+
+  # Actions are pinned to commit SHAs, not tags: a tag is mutable, so `@v7`
+  # means "whatever that repo decides v7 points at today" — including after a
+  # maintainer account is compromised, which is how action supply-chain attacks
+  # have actually worked. Dependabot understands SHA pins and bumps both the SHA
+  # and the `# vX.Y.Z` comment beside it, so pinning costs nothing to maintain.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 56" width="216" height="56" role="img" aria-label="ACME">
+  <title>ACME</title>
+  <g fill="none" stroke="#000000" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.68 49.13 29 10.92 49.32 49.13" stroke-linejoin="miter" stroke-miterlimit="10"/>
+    <path d="M95.89 14.66A20.75 20.75 0 1 0 95.89 41.34"/>
+    <path d="M113.25 48.75V7.25L135 48.75 156.75 7.25V48.75"/>
+    <path d="M207.75 7.25H178.75V48.75H207.75"/>
+    <path d="M178.75 28H204.25"/>
+  </g>
+</svg>

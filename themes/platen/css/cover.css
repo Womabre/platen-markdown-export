@@ -1,0 +1,117 @@
+/* A full-page colour jacket with two printer's rules, echoing the P mark.
+   No fixed A4 offsets: the same composition follows the selected sheet size. */
+@page cover {
+    margin: 0;
+    @top-left      { content: ''; }
+    @top-right     { content: ''; }
+    @bottom-left   { content: ''; }
+    @bottom-center { content: ''; }
+    @bottom-right  { content: ''; }
+}
+
+.cover-page {
+    page: cover;
+    width: var(--page-width, 210mm);
+    height: var(--page-height, 297mm);
+    padding: calc(var(--page-height, 297mm) * 0.075) calc(var(--page-width, 210mm) * 0.10);
+    box-sizing: border-box;
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+    color: #ffffff;
+    background-color: var(--brand-main);
+    /* Modern's resolved colour/opacity stops, with a straight top-to-bottom fade. */
+    --cover-overlay-angle: 180deg;
+    background-image: var(--cover-overlay), var(--cover-photo);
+    background-size: cover;
+    background-position: var(--cover-photo-pos-x, 50%) center;
+}
+
+.platen-masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    padding-bottom: 7mm;
+    border-bottom: 0.3mm solid rgba(255,255,255,0.7);
+}
+.platen-wordmark img { display: block; width: 43mm; height: auto; }
+.cover-slogan {
+    font-family: var(--platen-sans);
+    font-size: 8pt;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    text-align: right;
+    max-width: 45%;
+    margin: 0 0 0 5mm;
+}
+.platen-cover-body { flex: 1; display: flex; align-items: center; min-height: 0; padding: 10mm 0; }
+.platen-title-block { width: 100%; }
+.cover-platen .cover-title {
+    font-family: var(--font-heading, Georgia, serif);
+    font-size: 40pt;
+    font-weight: 400;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    color: var(--cover-title-color, #ffffff);
+    margin: 0;
+    padding: 0;
+    border: none;
+    overflow-wrap: break-word;
+}
+.cover-platen .cover-subtitle {
+    font-family: var(--font-heading, Georgia, serif);
+    font-size: 18pt;
+    line-height: 1.35;
+    color: var(--cover-title-color, #ffffff);
+    margin: 6mm 0 0;
+}
+.cover-platen .cover-title::before {
+    content: '';
+    display: block;
+    width: 22mm;
+    border-top: 1.1mm solid var(--cover-title-color, #ffffff);
+    border-bottom: 0.35mm solid var(--cover-title-color, #ffffff);
+    height: 2mm;
+    margin-bottom: 10mm;
+}
+.platen-customer-logo:empty,
+.cover-subtitle:empty,
+.cover-slogan:empty,
+.cover-address:empty,
+.platen-revisions:empty,
+.platen-document-info:empty { display: none; }
+.cover-logo-wrapper { display: inline-block; padding: 3mm; margin-top: 8mm; }
+.cover-logo-wrapper img { display: block; width: auto; height: auto; max-width: 50mm; max-height: 16mm; }
+
+.platen-cover-details {
+    flex-shrink: 0;
+    border-top: 0.6mm solid rgba(255,255,255,0.7);
+    padding-top: 6mm;
+    font-family: var(--platen-sans);
+}
+/* The info rows and revision table are tables: they use the body font, like
+   the tables in the document. The details block stays sans for the address. */
+.cover-info-table { display: grid; grid-template-columns: 26mm 1fr; column-gap: 4mm; row-gap: 1.5mm; font-family: var(--font-body, Georgia, serif); }
+.cover-info-label { font-size: 8pt; color: rgba(255,255,255,0.8); }
+.cover-info-value { font-size: 8.5pt; color: #ffffff; overflow-wrap: break-word; }
+.cover-address { font-size: 8pt; line-height: 1.5; color: rgba(255,255,255,0.8); margin: 4mm 0 0; }
+.platen-revisions { margin-top: 6mm; }
+.cover-platen .revision-table {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body, Georgia, serif);
+    font-size: 7.5pt;
+    line-height: 1.4;
+    margin: 0;
+}
+.cover-platen .revision-table tr,
+.cover-platen .revision-table th,
+.cover-platen .revision-table td { background: transparent; color: #ffffff; }
+.cover-platen .revision-table th,
+.cover-platen .revision-table td { border: none; border-bottom: 0.2mm solid rgba(255,255,255,0.3); padding: 2mm 2mm 2mm 0; text-align: left; }
+.cover-platen .revision-table th { font-size: 7pt; font-weight: 600; color: rgba(255,255,255,0.8); }
+.cover-platen .revision-table tbody tr:last-child td { border-bottom: none; }
+.cover-platen .revision-table .rev-center { width: 3em; }
+.cover-platen .revision-table .rev-remarks { overflow-wrap: normal; word-break: normal; hyphens: none; }

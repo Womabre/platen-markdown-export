@@ -1,0 +1,49 @@
+{
+    "name": "Ghostwriter",
+    "slogan": "",
+    "address": [],
+    "logo": "logos/logo.svg",
+    "logoWhite": "logos/logo-white.svg",
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+    "fonts": [],
+    "fontFamily": {
+        "body": "\"Open Sans\", Arial, sans-serif",
+        "heading": "\"Open Sans\", Arial, sans-serif"
+    },
+    "defaultPalette": "Ghostwriter",
+    "palettes": {
+        "Ghostwriter": {
+            "extraLight": "#dedede",
+            "light": "#7a7a7a",
+            "main": "#222222",
+            "regular": "#1f1f1f",
+            "medium": "#4e4e4e",
+            "dark": "#181818",
+            "extraDark": "#0f0f0f"
+        }
+    },
+    "styles": {
+        "none": {
+            "palette": "Ghostwriter",
+            "overlay": [
+                1,
+                1
+            ]
+        },
+        "Ghostwriter": {
+            "palette": "Ghostwriter",
+            "overlay": [
+                0.92,
+                1
+            ]
+        }
+    }
+}

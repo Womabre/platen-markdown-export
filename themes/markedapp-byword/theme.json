@@ -1,0 +1,50 @@
+{
+    "name": "Byword",
+    "slogan": "",
+    "address": [],
+    "background": "#f2f2f2",
+    "logo": "logos/idea-svgrepo-com.svg",
+    "logoWhite": "logos/idea-svgrepo-com-white.svg",
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+    "fonts": [],
+    "fontFamily": {
+        "body": "\"Helvetica Neue\", Helvetica, Arial, sans-serif",
+        "heading": "\"Helvetica Neue\", Helvetica, Arial, sans-serif"
+    },
+    "defaultPalette": "Byword",
+    "palettes": {
+        "Byword": {
+            "extraLight": "#dedede",
+            "light": "#7a7a7a",
+            "main": "#222222",
+            "regular": "#1f1f1f",
+            "medium": "#4e4e4e",
+            "dark": "#181818",
+            "extraDark": "#0f0f0f"
+        }
+    },
+    "styles": {
+        "none": {
+            "palette": "Byword",
+            "overlay": [
+                1,
+                1
+            ]
+        },
+        "Byword": {
+            "palette": "Byword",
+            "overlay": [
+                0.92,
+                1
+            ]
+        }
+    }
+}

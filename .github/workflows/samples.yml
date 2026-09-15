@@ -1,0 +1,65 @@
+name: Render the sample documents
+
+# The twelve `themes/*/sample *.md` files are the showcase and the de-facto
+# documentation — they are what a new user copies from — and nothing rendered
+# them on a commit. `verify-pdf-export.js --all-themes` runs in CI, but against
+# the minimal pipeline fixture: it proves each theme lays out, not that each
+# sample still exports. A sample that broke was invisible until somebody tried it.
+#
+# Deliberately NOT on push/pull_request, for the same reason setup.yml is not.
+# These documents exercise everything the fixture avoids on purpose — Mermaid
+# needs a Chromium, draw.io needs an Electron app, icon fonts and Twemoji need
+# the network — so running them per pull request would make every PR wait on
+# three third-party hosts. Weekly plus on demand catches a sample that has
+# rotted without putting that cost on the critical path.
+on:
+  schedule:
+    - cron: '43 5 * * 1'    # Mondays, 05:43 UTC — its own minute, clear of the other crons
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  samples:
+    name: export every sample document
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # Debian's package pulls in Pango/Cairo/GDK-Pixbuf, so no pip or GTK
+      # bootstrap is needed here.
+      - name: Install WeasyPrint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends weasyprint
+          weasyprint --version
+
+      # Unlike the fixture, these documents contain Mermaid diagrams, and
+      # rendering one needs a real browser.
+      - name: Install Chromium for Mermaid
+        run: npx playwright install --with-deps chromium
+
+      # Two samples embed .drawio diagrams. Best-effort: a missing draw.io is a
+      # warning inside the exporter, not a failure, so the run still proves the
+      # other twenty-odd pages of each document. Losing the diagrams is worth
+      # more than a scheduled job that goes red when snap has a bad day — an
+      # ignored red job is worse than no job, which is the same reason
+      # dependabot.yml groups its updates.
+      - name: Install draw.io (best effort)
+        run: sudo snap install drawio || echo "::warning::draw.io unavailable — .drawio diagrams will be skipped"
+
+      # Each sample declares its own Theme, Style, logos and page geometry, so
+      # this exercises twelve different brand packages against twelve real
+      # documents. Every PDF is asserted the same way the fixture is: non-empty,
+      # a %PDF- signature, a readable page tree, and a document title.
+      - name: Export and verify every sample
+        run: node scripts/verify-pdf-export.js --samples --require

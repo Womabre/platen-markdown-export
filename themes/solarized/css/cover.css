@@ -1,0 +1,353 @@
+@page cover {
+    margin: 0;
+    @top-left      { content: ''; }
+    @top-right     { content: ''; }
+    @bottom-left   { content: ''; }
+    @bottom-center { content: ''; }
+    @bottom-right  { content: ''; }
+}
+
+.cover-page {
+    page: cover;
+    /* Full sheet, edge to edge: @page cover sets margin: 0. Driven by the
+       `Page Size` frontmatter (buildPageMetricsCss) so a larger sheet does not
+       leave the cover squeezed into an A4-sized corner; the fallbacks keep A4
+       for any path that does not emit the vars. */
+    width: var(--page-width, 210mm);
+    height: var(--page-height, 297mm);
+    page-break-after: always;
+    padding: 20mm 20mm 10mm 20mm;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* solarized: retro diagonal bands over the magenta surface (manual multi-stop) */
+.cover-page {
+    background-image:
+        linear-gradient(135deg,
+            rgba(0,0,0,0.32) 0%, rgba(0,0,0,0.32) 11%,
+            rgba(0,0,0,0) 11%, rgba(0,0,0,0) 23%,
+            rgba(0,0,0,0.32) 23%, rgba(0,0,0,0.32) 35%,
+            rgba(0,0,0,0) 35%, rgba(0,0,0,0) 47%,
+            rgba(0,0,0,0.32) 47%, rgba(0,0,0,0.32) 59%,
+            rgba(0,0,0,0) 59%, rgba(0,0,0,0) 71%,
+            rgba(0,0,0,0.32) 71%, rgba(0,0,0,0.32) 83%,
+            rgba(0,0,0,0) 83%, rgba(0,0,0,0) 100%),
+        var(--cover-overlay),
+        var(--cover-photo) !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+.cover-title {
+    color: var(--cover-title-color, #ffffff);
+    font-size: 34pt;
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 700;
+    margin: 0 0 24px 0;
+    padding-bottom: 16px;
+    line-height: 1.2;
+    border-bottom-style: solid;
+    border-bottom-width: 4px;
+    border-bottom-color: var(--cover-title-color, rgba(253,246,227,0.95));
+}
+
+/* ── Middle section (logo + revision table) ──────────────── */
+.cover-middle {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ── Cover logo ───────────────────────────────────────── */
+#cover-logo-slot {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    max-height: 60mm;
+    overflow: visible;
+}
+
+#revision-table-slot {
+    flex-shrink: 0;
+}
+
+/* The wrapper is a single element — no pseudo-elements, no seam.
+   padding-right: 210mm extends the background box off the right page edge.
+   margin-right: -210mm cancels the layout effect so flex centering still
+   places the logo near the horizontal centre of the page.
+   flex-shrink: 0 prevents flexbox from compressing the padding back.
+   WeasyPrint clips the overflowing paint at the physical page boundary. */
+.cover-logo-wrapper {
+    display: flex;
+    align-items: center;
+    border-radius: 5mm 0 0 5mm;  /* round left side only; right bleeds off page */
+    /* The right padding must outrun the sheet so the panel bleeds off its edge,
+       and the negative margin cancels that padding's effect on layout so flex
+       still centres the logo. Both track the page width. */
+    padding: 5mm var(--page-width, 210mm) 5mm 5mm;
+    margin-right: calc(-1 * (var(--page-width, 210mm) - 9.25mm));
+    flex-shrink: 0;
+}
+
+.cover-logo-wrapper img {
+    min-height: 30mm;
+    max-height: 50mm;
+    min-width: 40mm;
+    max-width: 120mm;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+/* ── Revision table ─────────────────────────────────────── */
+/* All !important needed — theme.css general table rules bleed in via WeasyPrint */
+/* Cover tables (this one and the document-info rows) use the body font, like
+   the tables in the document; the title, subtitle and address keep the heading font. */
+.revision-table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-family: var(--font-body, sans-serif);
+    font-size: 9pt !important;
+    color: rgba(255,255,255,0.9) !important;
+    margin: 0 !important;
+    background-color: transparent !important;
+}
+
+.revision-table tr {
+    background-color: transparent !important;
+}
+
+.revision-table th,
+.revision-table td {
+    font-family: var(--font-body, sans-serif) !important;
+    padding: 6px 12px !important;
+    text-align: left;
+    border: none !important;
+    border-bottom: 0.1em solid rgba(255,255,255,0.2) !important;
+    background-color: transparent !important;
+    color: rgba(255,255,255,0.9) !important;
+}
+
+.revision-table td.rev-remarks {
+    /* Long remarks wrap at word boundaries; a value split mid-word reads as a
+       typo, and an author name broken across lines is worse than a short line. */
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+}
+
+.revision-table thead tr {
+    background-color: transparent !important;
+}
+
+.revision-table thead th {
+    font-family: var(--font-body, sans-serif) !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.05em !important;
+    color: rgba(255,255,255,0.55) !important;
+    border-bottom: 0.15em solid rgba(255,255,255,0.35) !important;
+    padding-bottom: 8px !important;
+}
+
+.revision-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.rev-center {
+    text-align: center !important;
+    font-family: var(--font-body, sans-serif) !important;
+    width: 2em;
+}
+
+/* ── Bottom bar ─────────────────────────────────────────── */
+.cover-bottom {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 80mm;
+    flex-shrink: 0;
+}
+
+.cover-bottom-top,
+.cover-bottom-bottom {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 40mm;
+}
+
+.cover-info-table {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 16px;
+    row-gap: 4px;
+}
+
+.cover-info-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 9pt;
+    font-family: var(--font-body, sans-serif);
+    white-space: nowrap;
+}
+
+.cover-info-value {
+    color: rgba(255,255,255,0.9);
+    font-size: 9pt;
+    font-family: var(--font-body, sans-serif);
+    white-space: nowrap;
+}
+
+.cover-slogan {
+    color: rgba(255,255,255,0.8);
+    font-size: 10pt;
+    font-family: var(--font-heading, sans-serif);
+    margin: 0;
+}
+
+.cover-bottom-bottom img {
+    height: 40px;
+    width: auto;
+}
+
+.cover-address {
+    text-align: right;
+    color: rgba(255,255,255,0.7);
+    font-size: 9pt;
+    font-family: var(--font-heading, sans-serif);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* solarized: terminal-style boxed title, top-left */
+.cover-title { border: 2px solid var(--cover-title-color, rgba(253,246,227,0.85)); padding: 16px 22px; display: inline-block; font-size: 30pt; }
+
+/* solarized v2: clean photo on top, solid magenta zone below, boxed title on the zone */
+.cover-page {
+    background-image:
+        linear-gradient(182deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 55%, var(--brand-main) 55%, var(--brand-main) 100%),
+        var(--cover-photo) !important;
+    background-size: cover !important;
+    background-position: center top !important;
+}
+.cover-top { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; }
+.cover-middle { flex: 0 0 auto; }
+.cover-title { border: 2px solid var(--cover-title-color, rgba(253,246,227,0.85)); padding: 14px 20px; display: inline-block; font-size: 28pt; background: rgba(0,0,0,0.32); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   solarized: "L5 Diagonal Brochure" cover
+   Hero photo across the top; a magenta accent wedge and a solid solarized-teal
+   lower zone meet in a diagonal chevron. Title, info and revision history sit
+   in the teal zone; logo top-right over the photo. White text.
+   ───────────────────────────────────────────────────────────────────────── */
+.cover-l5 { --l5-main: #073642; }
+.cover-l5.cover-page {
+    display: block;
+    position: relative;
+    padding: 22mm;
+    background-color: var(--l5-main);
+}
+
+/* The hero photo is its own positioned/sized box (not a page-background layer),
+   so it can be framed independently of the page. It spans the top band and
+   `background-size: cover` fills it, cropping as needed; the box only needs to
+   reach past the tallest point of the diagonal cut below (~56% down) since the
+   decor layer painted over it hides any excess. The teal backstop shows if the
+   photo can't fill the box. Horizontal focal point via --cover-photo-pos-x. */
+.cover-l5-photo {
+    position: absolute; top: 0; left: 0; right: 0; height: 60%; z-index: 0;
+    background-color: var(--l5-main);
+    background-image: var(--cover-photo);
+    background-size: cover;
+    background-position: var(--cover-photo-pos-x, 50%) top;
+    background-repeat: no-repeat;
+}
+
+/* Decor sits above the photo and reproduces the diagonal chevron: a thin seam
+   line, a subtle sheen, and the opaque teal/magenta zones below the cut. It
+   is fully transparent above the cut so the photo box shows through. */
+.cover-l5-decor {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;
+    background-image:
+        /* thin light seam line tracing the chevron */
+        linear-gradient(200deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 46.3%, rgba(253,246,227,0.6) 46.3%, rgba(253,246,227,0.6) 46.7%, rgba(0,0,0,0) 46.7%),
+        /* sheen for two-tone depth on the colour zones */
+        linear-gradient(200deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.24) 100%),
+        linear-gradient(200deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 47%, var(--l5-main) 47%, var(--l5-main) 100%),
+        linear-gradient(216deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 41%, var(--brand-main) 41%, var(--brand-main) 100%);
+    background-size: cover;
+    background-position: center;
+}
+
+/* brand cluster (logo + wordmark + social marks), top-right over the photo */
+.cover-l5-top {
+    position: absolute; top: 20mm; left: 22mm; right: 22mm; z-index: 2;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 5mm;
+}
+.cover-l5-brand { display: flex; align-items: center; gap: 4mm; }
+.cover-l5-logo img, .cover-l5-logo svg { height: 12mm; width: auto; max-width: 50mm; display: block; }
+
+.cover-l5-social { display: flex; gap: 3.5mm; }
+.cover-l5-social .ic {
+    width: 9mm; height: 9mm; border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    border: 0.3mm solid rgba(255,255,255,0.6);
+    display: flex; align-items: center; justify-content: center;
+}
+.cover-l5-social .ic svg { width: 4.4mm; height: 4.4mm; fill: none; stroke: #ffffff; stroke-width: 1.8; }
+
+/* title + details in the lower teal zone */
+.cover-l5-block { position: absolute; left: 22mm; right: 26mm; bottom: 22mm; z-index: 1; }
+.cover-l5 .cover-title {
+    color: var(--cover-title-color, #ffffff);
+    font-size: 38pt;
+    font-weight: 800;
+    line-height: 1.03;
+    letter-spacing: -0.015em;
+    background: none; border: none; margin: 0; padding: 0;
+}
+.cover-l5 .cover-title::before { content: none; display: none; }
+.cover-l5 .cover-subtitle {
+    color: var(--cover-title-color, rgba(253,246,227,0.92));
+    font-family: var(--font-heading, sans-serif);
+    font-size: 17pt; font-weight: 400; letter-spacing: 0.16em; text-transform: uppercase;
+    margin: 3mm 0 7mm 0;
+}
+.cover-l5 .cover-subtitle:empty { display: none; margin: 0 0 7mm 0; }
+.cover-l5 .cover-info-label { color: rgba(255,255,255,0.6); }
+.cover-l5 .cover-info-value { color: #ffffff; font-weight: 600; }
+.cover-l5 .cover-address { text-align: left; color: rgba(255,255,255,0.85); margin-top: 4mm; }
+.cover-l5-rev { margin-top: 5mm; }
+.cover-l5-rev .revision-table { font-size: 8pt !important; }
+
+/* cover logo: a centred plate floating on the hero photo below the top edge — a
+   featured partner mark over the nebula, clear of the top-right brand cluster and
+   the magenta wedge, above the diagonal chevron. Background comes SOLELY from the
+   frontmatter `Cover Logo: Background` inline style (absent → transparent); no
+   colour here (an !important would override the inline style). inline-block, not
+   inline-flex — WeasyPrint double-paints translucent inline-flex backgrounds. */
+.cover-l5-cover {
+    position: absolute; top: 46mm; left: 22mm; right: 22mm; z-index: 2;
+    text-align: center;
+}
+.cover-l5-cover .cover-logo-wrapper {
+    display: inline-block;
+    padding: 3mm 6mm; margin: 0; border-radius: 1.5mm;
+}
+.cover-l5-cover .cover-logo-wrapper img {
+    max-height: 12mm; max-width: 55mm; min-width: 0; min-height: 0;
+    width: auto; height: auto; display: block;
+}
+
+/* `Cover Slogan: false` / `Cover Address: false` empty the slot rather than
+   remove the element, so collapse it and let the layout close up. */
+.cover-slogan:empty,
+.cover-address:empty { display: none; }

@@ -1,0 +1,39 @@
+{
+    "name": "Gaia",
+    "slogan": "",
+    "address": [],
+    "background": "#fff8e1",
+
+    "logo": "logos/earth-grid-svgrepo-com.svg",
+    "logoWhite": "logos/earth-grid-svgrepo-com-white.svg",
+
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+
+    "fonts": [],
+    "fontFamily": {
+        "body": "Lato, \"Avenir Next\", Avenir, \"Trebuchet MS\", \"Segoe UI\", sans-serif",
+        "heading": "Lato, \"Avenir Next\", Avenir, \"Trebuchet MS\", \"Segoe UI\", sans-serif"
+    },
+
+    "defaultPalette": "Gaia",
+    "palettes": {
+        "Gaia": { "extraLight": "#e1f3fb", "light": "#81d4fa", "main": "#0288d1", "regular": "#0397e3", "medium": "#29b6f6", "dark": "#016aa3", "extraDark": "#014a72" },
+        "Sky":  { "extraLight": "#e1f5fe", "light": "#b3e5fc", "main": "#81d4fa", "regular": "#4fc3f7", "medium": "#29b6f6", "dark": "#0288d1", "extraDark": "#01579b" },
+        "Sand": { "extraLight": "#fff8e1", "light": "#ffecb3", "main": "#455a64", "regular": "#607d8b", "medium": "#78909c", "dark": "#37474f", "extraDark": "#263238" }
+    },
+
+    "styles": {
+        "none": { "palette": "Gaia", "overlay": [1, 1] },
+        "Gaia": { "palette": "Gaia", "overlay": [0.9, 1] },
+        "Sky":  { "palette": "Sky",  "overlay": [0.9, 1] },
+        "Sand": { "palette": "Sand", "overlay": [0.9, 1] }
+    }
+}

@@ -1,0 +1,59 @@
+/* Font stack used across all page margin boxes — defined once, referenced via var() */
+:root {
+    --page-font: {{PAGE_FONT}};
+}
+
+@page {
+    size: {{PAGE_SIZE}};
+    margin: {{PAGE_MARGIN}};
+    background: {{PAGE_BG}};
+}
+
+/* `::: landscape` / `::: portrait` blocks each force their own sheet, whatever
+   the document-wide `Orientation` is. */
+@page landscape {
+    size: {{PAGE_SIZE_LANDSCAPE}};
+}
+
+@page portrait {
+    size: {{PAGE_SIZE_PORTRAIT}};
+}
+
+/* The first page is the cover when one is generated — brand mark instead of the
+   running header, no footer logo, author instead of the page number. Without a
+   cover these resolve to the ordinary page values so page one matches the rest. */
+@page :first {
+    @top-left      { content: {{FIRST_TOP_LEFT}}; font-family: var(--page-font); font-size: 9pt; color: #878787; }
+    @top-right     { content: {{CLASSIFICATION_CONTENT}}; }
+    @bottom-left   { content: {{DATE_CONTENT}}{{REV_CONTENT}}; font-family: var(--page-font); font-size: 9pt; color: #878787; }
+    @bottom-center { content: {{FIRST_BOTTOM_CENTER}}; }
+    @bottom-right  { content: {{FIRST_BOTTOM_RIGHT}}; font-family: var(--page-font); font-size: 9pt; color: #878787; }
+}
+
+@page {
+    @top-left      { content: {{HEADER_CONTENT}}; font-family: var(--page-font); font-size: 9pt; color: #878787; }
+    @top-right     { content: {{CLASSIFICATION_CONTENT}}; font-family: var(--page-font); font-size: 9pt; }
+    @bottom-left   { content: {{DATE_CONTENT}}{{REV_CONTENT}}; font-family: var(--page-font); font-size: 9pt; color: #878787; }
+    @bottom-center { content: element(logo-footer); }
+    @bottom-right  { content: {{FOOTER_CONTENT}}; font-family: var(--page-font); font-size: 9pt; color: #878787; }
+}
+
+/* Classification label — a running element (not a content: string) so the
+   top-right margin box can carry the Phosphor shield icon as real markup. */
+#classification-header { position: running(classification); }
+
+/* Running header source: each h2 publishes its text as string "section", which
+   the @top-left margin box pulls in when Running Header is enabled. */
+h2 { string-set: section content(text); }
+
+#logo-header { position: running(logo-header); }
+#logo-header img { height: 35px; width: auto; }
+#logo-footer { position: running(logo-footer); }
+#logo-footer img { height: 25px; width: auto; opacity: 0.8; }
+
+/* Override hljs overflow-x:auto which prevents wrapping in WeasyPrint */
+pre, pre code.hljs {
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-x: visible;
+}

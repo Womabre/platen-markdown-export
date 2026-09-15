@@ -1,0 +1,37 @@
+{
+    "name": "Uncover",
+    "slogan": "",
+    "address": [],
+    "background": "#fdfcff",
+
+    "logo": "logos/navigate-svgrepo-com.svg",
+    "logoWhite": "logos/navigate-svgrepo-com-white.svg",
+
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+
+    "fonts": [],
+    "fontFamily": {
+        "body": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", sans-serif",
+        "heading": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", sans-serif"
+    },
+
+    "defaultPalette": "Uncover",
+    "palettes": {
+        "Uncover": { "extraLight": "#dcf3fb", "light": "#5cc6ec", "main": "#009dd5", "regular": "#0aaee0", "medium": "#33bfe6", "dark": "#007aa6", "extraDark": "#005674" },
+        "Ink":     { "extraLight": "#e6e7e9", "light": "#a7abb3", "main": "#202228", "regular": "#3a3d45", "medium": "#565a63", "dark": "#15171c", "extraDark": "#0c0d10" }
+    },
+
+    "styles": {
+        "none":    { "palette": "Uncover", "overlay": [1, 1] },
+        "Uncover": { "palette": "Uncover", "overlay": [0.9, 1] },
+        "Ink":     { "palette": "Ink",     "overlay": [0.92, 1] }
+    }
+}

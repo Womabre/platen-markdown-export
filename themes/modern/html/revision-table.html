@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<!--
+  revision-table.html — Revision history table template for platen-markdown-export.js
+  ─────────────────────────────────────────────────────────────────────────
+  Template token (replaced at export time):
+    {{REVISION_ROWS}}   One or more <tr> blocks for each revision entry
+
+  Standalone preview: open in a browser to see the table styled with sample
+  data. The <script> block and page shell are stripped by loadHtmlTemplate()
+  during PDF export; only the <table> fragment is kept.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revision table preview</title>
+  <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/cover.css">
+  <style>
+    /* ── Standalone preview shell ── not used during PDF export ─────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #f50029;           /* Cherry-main — matches the cover page BG */
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20mm;
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+
+<table class="revision-table">
+  <thead>
+    <tr>
+      <th>Rev.</th>
+      <th>Date</th>
+      <th>Author</th>
+      <th>Comments</th>
+    </tr>
+  </thead>
+  <tbody id="revision-tbody"><!--{{REVISION_ROWS}}--></tbody>
+</table>
+
+<script>
+  // ── Standalone preview ────────────────────────────────────────────────────
+  // Runs only when opened directly in a browser. During PDF export,
+  // loadHtmlTemplate() strips this entire <script> block before inserting
+  // the <table> fragment into the document.
+
+  (function () {
+    if (document.title !== 'Revision table preview') return;
+
+    const sampleRevisions = [
+      { revision: 'A',  date: '2025-01-10', author: 'W. de Vries', remarks: 'Initieel concept' },
+      { revision: 'A1', date: '2025-02-04', author: 'W. de Vries', remarks: 'Lifecycle sectie toegevoegd' },
+      { revision: 'B',  date: '2025-03-25', author: 'W. de Vries', remarks: 'Reviewopmerkingen verwerkt' },
+    ];
+
+    const tbody = document.getElementById('revision-tbody');
+    tbody.innerHTML = sampleRevisions.map(r => `
+        <tr>
+          <td class="rev-center">${r.revision}</td>
+          <td>${r.date}</td>
+          <td>${r.author}</td>
+          <td class="rev-remarks">${r.remarks}</td>
+        </tr>`).join('');
+    tbody.style.visibility = 'visible';
+  }());
+</script>
+
+</body>
+</html>

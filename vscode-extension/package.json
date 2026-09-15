@@ -1,0 +1,349 @@
+{
+  "name": "platen-markdown-export-vscode",
+  "displayName": "Platen Markdown Export",
+  "description": "Export Markdown (or HTML) to print-quality PDF / standalone HTML via the platen-markdown-export CLI.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "publisher": "Womabre",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Womabre/platen-markdown-export.git",
+    "directory": "vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Exporting spawns a CLI process resolved from the workspace and runs it against the workspace's own files. Both the resolution and the export read paths a repository controls, so this extension only runs in a workspace you trust."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "The export spawns a local process against a file on disk, so the document must exist on the local filesystem."
+    }
+  },
+  "contributes": {
+    "markdown.markdownItPlugins": true,
+    "commands": [
+      {
+        "command": "platenMarkdownExport.export",
+        "title": "Markdown Export: Export (Markdown \u2192 PDF/HTML)",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.exportPdf",
+        "title": "Markdown Export: Export as PDF",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.exportHtml",
+        "title": "Markdown Export: Export as HTML",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.exportBoth",
+        "title": "Markdown Export: Export as PDF + HTML",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.release",
+        "title": "Markdown Export: Export and cut a release",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.frontmatterWizard",
+        "title": "Markdown Export: Frontmatter Wizard (fill in this document)\u2026",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.insertFrontmatter",
+        "title": "Markdown Export: Insert Frontmatter Template (static)",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.newDocument",
+        "title": "Markdown Export: New Document with Frontmatter Wizard\u2026",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.selectTheme",
+        "title": "Markdown Export: Select Theme\u2026",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.addThemeFolder",
+        "title": "Markdown Export: Add External Theme Folder\u2026",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.setup",
+        "title": "Markdown Export: Install runtime dependencies (WeasyPrint, Chromium)",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.showOutput",
+        "title": "Markdown Export: Show output log",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.refreshPreviewThemes",
+        "title": "Markdown Export: Refresh Preview Themes",
+        "category": "Platen Markdown Export"
+      },
+      {
+        "command": "platenMarkdownExport.setupMpePreview",
+        "title": "Markdown Export: Theme Markdown Preview Enhanced in This Workspace",
+        "category": "Platen Markdown Export"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "platenMarkdownExport.contextMenu",
+        "label": "Markdown Export"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "platenMarkdownExport.contextMenu",
+          "when": "resourceLangId == markdown || resourceExtname == .md || resourceExtname == .markdown",
+          "group": "1_modification@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "platenMarkdownExport.contextMenu",
+          "when": "explorerResourceIsFolder || resourceExtname == .md || resourceExtname == .markdown",
+          "group": "navigation@100"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "platenMarkdownExport.showOutput",
+          "when": "false"
+        },
+        {
+          "command": "platenMarkdownExport.export",
+          "when": "resourceLangId == markdown || resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .html || resourceExtname == .htm"
+        },
+        {
+          "command": "platenMarkdownExport.exportPdf",
+          "when": "resourceLangId == markdown || resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .html || resourceExtname == .htm"
+        },
+        {
+          "command": "platenMarkdownExport.exportHtml",
+          "when": "resourceLangId == markdown || resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .html || resourceExtname == .htm"
+        },
+        {
+          "command": "platenMarkdownExport.exportBoth",
+          "when": "resourceLangId == markdown || resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .html || resourceExtname == .htm"
+        },
+        {
+          "command": "platenMarkdownExport.release",
+          "when": "resourceLangId == markdown || resourceExtname == .md || resourceExtname == .markdown"
+        },
+        {
+          "command": "platenMarkdownExport.insertFrontmatter",
+          "when": "resourceLangId == markdown || resourceExtname == .md || resourceExtname == .markdown"
+        },
+        {
+          "command": "platenMarkdownExport.frontmatterWizard",
+          "when": "resourceLangId == markdown || resourceExtname == .md || resourceExtname == .markdown"
+        }
+      ],
+      "platenMarkdownExport.contextMenu": [
+        {
+          "command": "platenMarkdownExport.frontmatterWizard",
+          "when": "!explorerResourceIsFolder",
+          "group": "1_wizard@1"
+        },
+        {
+          "command": "platenMarkdownExport.insertFrontmatter",
+          "when": "!explorerResourceIsFolder",
+          "group": "1_wizard@2"
+        },
+        {
+          "command": "platenMarkdownExport.newDocument",
+          "group": "1_wizard@3"
+        },
+        {
+          "command": "platenMarkdownExport.export",
+          "when": "!explorerResourceIsFolder",
+          "group": "2_export@1"
+        },
+        {
+          "command": "platenMarkdownExport.exportPdf",
+          "when": "!explorerResourceIsFolder",
+          "group": "2_export@2"
+        },
+        {
+          "command": "platenMarkdownExport.exportHtml",
+          "when": "!explorerResourceIsFolder",
+          "group": "2_export@3"
+        },
+        {
+          "command": "platenMarkdownExport.exportBoth",
+          "when": "!explorerResourceIsFolder",
+          "group": "2_export@4"
+        },
+        {
+          "command": "platenMarkdownExport.release",
+          "when": "!explorerResourceIsFolder",
+          "group": "2_export@5"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Platen Markdown Export",
+      "properties": {
+        "platenMarkdownExport.cliPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "markdownDescription": "Absolute path to the CLI entry point (`dist/index.js`) or to an installed `platen-markdown-export` binary. Leave empty to auto-resolve: workspace `dist/index.js` (only when its `package.json` identifies it as this tool), then the extension's bundled CLI, then `platen-markdown-export` on `PATH`.\n\nUser-settable only (`machine` scope): it names a program to execute, so a repository must not be able to set it from `.vscode/settings.json`."
+        },
+        "platenMarkdownExport.nodePath": {
+          "type": "string",
+          "default": "node",
+          "scope": "machine",
+          "markdownDescription": "Node.js executable used to run the CLI when cliPath points to a .js file.\n\nUser-settable only (`machine` scope): it names a program to execute."
+        },
+        "platenMarkdownExport.theme": {
+          "type": "string",
+          "default": "",
+          "description": "Brand package (theme) to use. Empty = let the CLI decide (frontmatter / EXPORT_THEME / default). Maps to --theme."
+        },
+        "platenMarkdownExport.themePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra folders searched for themes, each holding one directory per theme (every one with a `theme.json`) - the same shape as the tool's own `themes/`.\n\nUse **Markdown Export: Add External Theme Folder...** rather than editing this by hand: it checks the folder actually contains themes before saving it, so a mistyped path fails while the folder picker is still on screen instead of later as \"Theme not found\".\n\nMaps to `--theme-path`, which the CLI also reads from `EXPORT_THEME_PATH` - so the terminal and this extension see the same list. An external theme shadows a built-in one of the same name."
+        },
+        "platenMarkdownExport.preview.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show export documents in VS Code's built-in Markdown preview in their theme and style - the export's own CSS, chosen the way an export chooses it (`theme` setting, then the `Theme` frontmatter, then `EXPORT_THEME`, then `default`).\n\nOnly documents whose frontmatter declares `Mode`, `Theme` or `Style` are themed; every other Markdown file keeps the preview's normal look. It themes the text only: pages, the cover, running headers and rendered diagrams appear in the export alone.\n\nThe stylesheets are rebuilt when the extension starts and when theme folders change. After editing a theme's CSS, run **Markdown Export: Refresh Preview Themes**."
+        },
+        "platenMarkdownExport.defaultAuthor": {
+          "type": "string",
+          "default": "",
+          "description": "Author pre-filled by the New Document wizard. Empty = ask with an empty box."
+        },
+        "platenMarkdownExport.mode": {
+          "type": "string",
+          "enum": [
+            "",
+            "pdf",
+            "html",
+            "pdf,html",
+            "debug"
+          ],
+          "default": "",
+          "description": "Export mode. Empty = use the document's Mode frontmatter. Maps to --mode."
+        },
+        "platenMarkdownExport.stylesheet": {
+          "type": "string",
+          "default": "",
+          "description": "CSS stylesheet to inline, or \"none\" to export without one. Empty = the active theme's stylesheet. Maps to --stylesheet."
+        },
+        "platenMarkdownExport.dpi": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "WeasyPrint DPI. 0 = use the CLI default (300). Maps to --dpi."
+        },
+        "platenMarkdownExport.infographicIcons": {
+          "type": "string",
+          "enum": [
+            "iconify",
+            "weavefox",
+            "none"
+          ],
+          "enumDescriptions": [
+            "Iconify (default). Only well-formed icon names such as mdi/home are sent, to api.iconify.design; the text of your documents never leaves this machine.",
+            "WeaveFox — Ant Group's service at www.weavefox.cn. The icon names and search terms your documents use are sent there. DATA MAY GO TO SERVERS IN CHINA.",
+            "No icon requests at all. Icons are left out of the diagram."
+          ],
+          "default": "iconify",
+          "scope": "machine",
+          "markdownDescription": "Where ` ```infographic ` diagrams get their icons. Maps to `--infographic-icons`.\n\n- **iconify** (default): sends only icon names such as `mdi/home`, to Iconify.\n- **weavefox**: sends the icon names and search terms your documents use to Ant Group's WeaveFox service at `www.weavefox.cn`. **Data may go to servers in China.**\n- **none**: makes no request; icons are left out.\n\nUser-settable only (`machine` scope): a repository must not be able to decide that your documents' text is sent to a third party. With `iconify` the extension passes no flag, so `EXPORT_INFOGRAPHIC_ICONS` still applies."
+        },
+        "platenMarkdownExport.openAfterExport": {
+          "type": "boolean",
+          "default": false,
+          "description": "Open the resulting file(s) (PDF viewer / browser, one per output mode) after export. Maps to --open. Off by default since exportOnSave means this would fire on every save."
+        },
+        "platenMarkdownExport.strict": {
+          "type": "boolean",
+          "default": false,
+          "description": "Fail the export if it raised any warning \u2014 a missing image, an unresolved include, a font that failed to fetch. The output is still written; the run is reported as failed. Maps to --strict."
+        },
+        "platenMarkdownExport.noBump": {
+          "type": "boolean",
+          "default": false,
+          "description": "Don't modify the source markdown (skip revision-date update and post-release bump). Maps to --no-bump."
+        },
+        "platenMarkdownExport.quiet": {
+          "type": "boolean",
+          "default": false,
+          "description": "Suppress progress output from the CLI. Maps to --quiet."
+        },
+        "platenMarkdownExport.extraArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "machine",
+          "markdownDescription": "Additional raw CLI arguments appended to every export.\n\nUser-settable only (`machine` scope): it is an unchecked passthrough to the command line. The per-project knobs \u2014 `theme`, `mode`, `stylesheet`, `dpi` \u2014 stay workspace-settable."
+        },
+        "platenMarkdownExport.env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "scope": "machine",
+          "markdownDescription": "Extra environment variables passed to the CLI process, e.g. `TYPEKIT_FUTURA_BOOK_URL`, `EXPORT_PDF_TIMEOUT_MS`.\n\nUser-settable only (`machine` scope): the process environment decides what the runtime loads (`NODE_OPTIONS`, for one), so a repository must not be able to set it."
+        },
+        "platenMarkdownExport.exportOnSave": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically export whenever a Markdown file that declares a `Mode:` frontmatter key is saved \u2014 no VS Code task/keybinding setup needed. Files without a `Mode:` key (READMEs, notes) are skipped entirely, unless `platenMarkdownExport.mode` forces one. Uses the same settings as the manual Export command, with one difference: a save-triggered export passes `--no-revision-bump`, so it stamps the revision date but never cuts a release. Releasing a `Status: Released` document stays an explicit Export. Rapid saves are debounced into a single run."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "test": "npm run compile && node --test out/tests/core.test.js out/tests/preview.test.js",
+    "test:integration": "npm run compile && node out/tests/integration/launch.js",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src",
+    "bundle": "node scripts/bundle.js",
+    "build": "npm run package",
+    "package": "npm run compile && npm run bundle && vsce package --no-dependencies --out platen-markdown-export.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.2.0",
+    "eslint": "^10.9.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "^8.68.0"
+  }
+}

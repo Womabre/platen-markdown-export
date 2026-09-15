@@ -1,0 +1,45 @@
+{
+    "name": "Solarized",
+    "slogan": "",
+    "address": [],
+    "background": "#002b36",
+    "logo": "logos/logo-white.svg",
+    "logoWhite": "logos/logo-white.svg",
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+    "fonts": [],
+    "fontFamily": {
+        "body": "\"PT Sans\", sans-serif",
+        "heading": "\"PT Sans\", sans-serif"
+    },
+    "defaultPalette": "Solarized",
+    "palettes": {
+        "Solarized": { "extraLight": "#f8e1ec", "light": "#e586b4", "main": "#d33682", "regular": "#be3175", "medium": "#dc5e9b", "dark": "#94265b", "extraDark": "#5f183b" }
+    },
+    "styles": {
+        "none": { "palette": "Solarized", "overlay": [1, 1] },
+        "Dark": {
+            "palette": "Solarized",
+            "overlay": [0.92, 1],
+            "background": "#002b36",
+            "fontFamily": { "body": "\"PT Sans\", sans-serif", "heading": "\"PT Sans\", sans-serif" },
+            "fontImport": "https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap",
+            "cssVars": { "--Grey-dark": "#839496", "--link-color": "#b58900", "--code-bg": "#073642", "--table-stripe": "#073642" }
+        },
+        "Light": {
+            "palette": "Solarized",
+            "overlay": [0.92, 1],
+            "background": "#fdf6e3",
+            "fontFamily": { "body": "\"PT Sans\", sans-serif", "heading": "\"PT Sans\", sans-serif" },
+            "fontImport": "https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap",
+            "cssVars": { "--Grey-dark": "#657b83", "--link-color": "#b58900", "--code-bg": "#eee8d5" }
+        }
+    }
+}

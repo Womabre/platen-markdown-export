@@ -1,0 +1,306 @@
+@page cover {
+    margin: 0;
+    @top-left      { content: ''; }
+    @top-right     { content: ''; }
+    @bottom-left   { content: ''; }
+    @bottom-center { content: ''; }
+    @bottom-right  { content: ''; }
+}
+
+.cover-page {
+    page: cover;
+    /* Full sheet, edge to edge: @page cover sets margin: 0. Driven by the
+       `Page Size` frontmatter (buildPageMetricsCss) so a larger sheet does not
+       leave the cover squeezed into an A4-sized corner; the fallbacks keep A4
+       for any path that does not emit the vars. */
+    width: var(--page-width, 210mm);
+    height: var(--page-height, 297mm);
+    page-break-after: always;
+    padding: 20mm 20mm 10mm 20mm;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* witex: flat academic surface with a thin inset rule frame near the edges */
+.cover-page {
+    background-image: var(--cover-overlay), var(--cover-photo) !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+.cover-page::after {
+    content: "";
+    position: absolute;
+    top: 9mm; left: 9mm; right: 9mm; bottom: 9mm;
+    border: 1px solid rgba(255,255,255,0.4);
+}
+
+.cover-title {
+    color: var(--cover-title-color, #ffffff);
+    font-size: 34pt;
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 24px 0;
+    padding-bottom: 16px;
+    line-height: 1.2;
+    border-bottom-style: double;
+    border-bottom-width: 4px;
+    border-bottom-color: var(--cover-title-color, rgba(255,255,255,0.9));
+}
+
+/* ── Middle section (logo + revision table) ──────────────── */
+.cover-middle {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ── Cover logo ───────────────────────────────────────── */
+#cover-logo-slot {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    max-height: 60mm;
+    overflow: visible;
+}
+
+#revision-table-slot {
+    flex-shrink: 0;
+}
+
+/* The wrapper is a single element — no pseudo-elements, no seam.
+   padding-right: 210mm extends the background box off the right page edge.
+   margin-right: -210mm cancels the layout effect so flex centering still
+   places the logo near the horizontal centre of the page.
+   flex-shrink: 0 prevents flexbox from compressing the padding back.
+   WeasyPrint clips the overflowing paint at the physical page boundary. */
+.cover-logo-wrapper {
+    display: flex;
+    align-items: center;
+    border-radius: 5mm 0 0 5mm;  /* round left side only; right bleeds off page */
+    /* The right padding must outrun the sheet so the panel bleeds off its edge,
+       and the negative margin cancels that padding's effect on layout so flex
+       still centres the logo. Both track the page width. */
+    padding: 5mm var(--page-width, 210mm) 5mm 5mm;
+    margin-right: calc(-1 * (var(--page-width, 210mm) - 9.25mm));
+    flex-shrink: 0;
+}
+
+.cover-logo-wrapper img {
+    min-height: 30mm;
+    max-height: 50mm;
+    min-width: 40mm;
+    max-width: 120mm;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+/* ── Revision table ─────────────────────────────────────── */
+/* All !important needed — theme.css general table rules bleed in via WeasyPrint */
+/* Cover tables (this one and the document-info rows) use the body font, like
+   the tables in the document; the title, subtitle and address keep the heading font. */
+.revision-table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-family: var(--font-body, sans-serif);
+    font-size: 9pt !important;
+    color: rgba(255,255,255,0.9) !important;
+    margin: 0 !important;
+    background-color: transparent !important;
+}
+
+.revision-table tr {
+    background-color: transparent !important;
+}
+
+.revision-table th,
+.revision-table td {
+    font-family: var(--font-body, sans-serif) !important;
+    padding: 6px 12px !important;
+    text-align: left;
+    border: none !important;
+    border-bottom: 0.1em solid rgba(255,255,255,0.2) !important;
+    background-color: transparent !important;
+    color: rgba(255,255,255,0.9) !important;
+}
+
+.revision-table td.rev-remarks {
+    /* Long remarks wrap at word boundaries; a value split mid-word reads as a
+       typo, and an author name broken across lines is worse than a short line. */
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+}
+
+.revision-table thead tr {
+    background-color: transparent !important;
+}
+
+.revision-table thead th {
+    font-family: var(--font-body, sans-serif) !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.05em !important;
+    color: rgba(255,255,255,0.55) !important;
+    border-bottom: 0.15em solid rgba(255,255,255,0.35) !important;
+    padding-bottom: 8px !important;
+}
+
+.revision-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.rev-center {
+    text-align: center !important;
+    font-family: var(--font-body, sans-serif) !important;
+    width: 2em;
+}
+
+/* ── Bottom bar ─────────────────────────────────────────── */
+.cover-bottom {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 80mm;
+    flex-shrink: 0;
+}
+
+.cover-bottom-top,
+.cover-bottom-bottom {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 40mm;
+}
+
+.cover-info-table {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 16px;
+    row-gap: 4px;
+}
+
+.cover-info-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 9pt;
+    font-family: var(--font-body, sans-serif);
+    white-space: nowrap;
+}
+
+.cover-info-value {
+    color: rgba(255,255,255,0.9);
+    font-size: 9pt;
+    font-family: var(--font-body, sans-serif);
+    white-space: nowrap;
+}
+
+.cover-slogan {
+    color: rgba(255,255,255,0.8);
+    font-size: 10pt;
+    font-family: var(--font-heading, sans-serif);
+    margin: 0;
+}
+
+.cover-bottom-bottom img {
+    height: 40px;
+    width: auto;
+}
+
+.cover-address {
+    text-align: right;
+    color: rgba(255,255,255,0.7);
+    font-size: 9pt;
+    font-family: var(--font-heading, sans-serif);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* witex: academic title-page — document info + company address stacked & centred */
+.cover-bottom-top { flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.cover-address { text-align: center; }
+
+/* witex: academic — title positioned in the upper third, single thin rule below */
+.cover-top { flex: 0 0 auto; margin-top: 42mm; }
+.cover-title { font-size: 32pt; border-top: none; border-bottom: 1px solid var(--cover-title-color, rgba(255,255,255,0.8)); padding-bottom: 14px; }
+
+/* witex v2: clean photo + solid academic zone below (still inside the inset rule frame), centred title band */
+.cover-page {
+    background-image:
+        linear-gradient(182deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 56%, var(--brand-main) 56%, var(--brand-main) 100%),
+        var(--cover-photo) !important;
+    background-size: cover !important;
+    background-position: center top !important;
+}
+.cover-top { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; margin-top: 0; }
+.cover-middle { flex: 0 0 auto; }
+.cover-title { font-size: 30pt; text-align: center; background: rgba(0,0,0,0.32); border: none; margin: 0 -20mm 0 -20mm; padding: 14px 20mm; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   witex: "Classic Title Page" cover — a light academic title page with a thin
+   double border, a centred serif headline and a framed hero photo.
+   ───────────────────────────────────────────────────────────────────────── */
+.cover-wx.cover-page {
+    display: block; position: relative; padding: 0;
+    background-color: #fbfbf8 !important;
+    background-image: none !important;
+}
+.cover-wx-frame {
+    position: absolute; top: 12mm; left: 12mm; right: 12mm; bottom: 12mm;
+    border: 0.5mm solid #1a1a1a; padding: 12mm 16mm;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.cover-wx-frame::before { content: ""; position: absolute; top: 2mm; left: 2mm; right: 2mm; bottom: 2mm; border: 0.2mm solid #1a1a1a; }
+.cover-wx-head { margin-left: -37em; display: flex; align-items: center; justify-content: space-between; }
+.cover-wx-logo img, .cover-wx-logo svg { height: 14mm; width: auto; display: block; }
+.cover-wx-titleblock { margin-top: 14mm; display: flex; flex-direction: column; align-items: center; gap: 6mm; }
+.cover-wx-rule { width: 52mm; height: 1px; background: #1a1a1a; display: block; }
+.cover-wx .cover-title { font-family: var(--font-heading, serif); color: var(--cover-title-color, #1a1a1a); font-weight: 700; font-size: 34pt; line-height: 1.12; text-align: center; margin: 0; padding: 0; background: none; border: none; }
+.cover-wx .cover-title::before { content: none; display: none; }
+.cover-wx .cover-subtitle { font-family: var(--font-heading, serif); color: var(--cover-title-color, #444); font-size: 17pt; font-style: italic; margin: 0; }
+.cover-wx .cover-subtitle:empty { display: none; }
+.cover-wx-photo {
+    margin: 14mm auto 0; width: 122mm; height: 76mm;
+    border: 0.4mm solid #1a1a1a; padding: 2.5mm;
+    background-color: #fbfbf8;
+    background-image: var(--cover-photo); background-size: cover;
+    background-position: var(--cover-photo-pos-x, 50%) center; background-repeat: no-repeat;
+    background-origin: content-box; background-clip: content-box;
+}
+.cover-wx-foot { margin-top: auto; padding-top: 10mm; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4mm; }
+.cover-wx .cover-info-table { display: inline-grid; grid-template-columns: auto auto; gap: 3px 12px; }
+.cover-wx .cover-info-label { color: #666; text-align: right; }
+.cover-wx .cover-info-value { color: #1a1a1a; text-align: left; font-weight: 600; }
+.cover-wx .revision-table,
+.cover-wx .revision-table th,
+.cover-wx .revision-table td { color: #1a1a1a !important; }
+.cover-wx .revision-table th,
+.cover-wx .revision-table td { border-bottom-color: rgba(0,0,0,0.15) !important; }
+.cover-wx .revision-table thead th { color: #666 !important; border-bottom-color: rgba(0,0,0,0.3) !important; }
+.cover-wx-rev { max-width: 150mm; }
+.cover-wx-rev .revision-table { font-size: 7pt !important; }
+/* cover logo: centred colophon mark on a full-width band at the foot of the
+   title page, inside the frame, below the revision table. The band colour
+   comes SOLELY from the frontmatter `Background` inline style on the wrapper —
+   no background is declared here (an !important here would beat the inline
+   style, and WeasyPrint double-paints inline-flex backgrounds, so the wrapper
+   is a plain flex box stretched across the strip). */
+.cover-wx-cover { position: absolute; left: 26mm; right: 26mm; bottom: 22mm; display: flex; z-index: 3; }
+.cover-wx-cover .cover-logo-wrapper { display: flex; flex: 1 1 auto; justify-content: center; align-items: center; padding: 4mm 0; margin: 0; border-radius: 0; }
+.cover-wx-cover img { min-height: 0; min-width: 0; max-height: 13mm; max-width: 60mm; width: auto; height: auto; display: block; }
+
+/* corrections: kill any leaked title underline */
+.cover-wx .cover-title::after { content: none; display: none; }
+
+/* `Cover Slogan: false` / `Cover Address: false` empty the slot rather than
+   remove the element, so collapse it and let the layout close up. */
+.cover-slogan:empty,
+.cover-address:empty { display: none; }

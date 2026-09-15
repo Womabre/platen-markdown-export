@@ -1,0 +1,52 @@
+{
+    "name": "Witex",
+    "slogan": "",
+    "address": [],
+    "logo": "logos/typography-svgrepo-com.svg",
+    "logoWhite": "logos/typography-svgrepo-com-white.svg",
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+    "fonts": [],
+    "fontFamily": {
+        "body": "\"Latin Modern Roman\", \"Computer Modern\", Georgia, serif",
+        "heading": "\"Latin Modern Roman\", \"Computer Modern\", Georgia, serif"
+    },
+    "fontSize": {
+        "body": "11pt"
+    },
+    "defaultPalette": "Witex",
+    "palettes": {
+        "Witex": {
+            "extraLight": "#dddddd",
+            "light": "#767676",
+            "main": "#1a1a1a",
+            "regular": "#171717",
+            "medium": "#484848",
+            "dark": "#121212",
+            "extraDark": "#0c0c0c"
+        }
+    },
+    "styles": {
+        "none": {
+            "palette": "Witex",
+            "overlay": [
+                1,
+                1
+            ]
+        },
+        "Witex": {
+            "palette": "Witex",
+            "overlay": [
+                0.92,
+                1
+            ]
+        }
+    }
+}

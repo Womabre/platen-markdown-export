@@ -1,0 +1,49 @@
+{
+    "name": "Bootstrap 3",
+    "slogan": "",
+    "address": [],
+    "logo": "logos/bootstrap-4-logo-svgrepo-com.svg",
+    "logoWhite": "logos/bootstrap-4-logo-svgrepo-com.svg",
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+    "fonts": [],
+    "fontFamily": {
+        "body": "\"Helvetica Neue\", Helvetica, Arial, sans-serif",
+        "heading": "\"Helvetica Neue\", Helvetica, Arial, sans-serif"
+    },
+    "defaultPalette": "Bootstrap",
+    "palettes": {
+        "Bootstrap": {
+            "extraLight": "#e0e0e0",
+            "light": "#858585",
+            "main": "#333333",
+            "regular": "#2e2e2e",
+            "medium": "#5c5c5c",
+            "dark": "#242424",
+            "extraDark": "#171717"
+        }
+    },
+    "styles": {
+        "none": {
+            "palette": "Bootstrap",
+            "overlay": [
+                1,
+                1
+            ]
+        },
+        "Bootstrap": {
+            "palette": "Bootstrap",
+            "overlay": [
+                0.92,
+                1
+            ]
+        }
+    }
+}

@@ -1,0 +1,705 @@
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css");
+@import url("https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.css");
+
+/* GitHub look (values from github.com / github-markdown-css), authored in the
+   shared theme structure so it stays consistent with the other themes and works
+   with the HTML-export dark-mode overlay. */
+
+@media print {
+  .page-break {
+    page-break-before: always;
+  }
+}
+
+/* ── Brand color tokens (GitHub) ─────────────────────────────────────────── */
+:root {
+  --Grey-extra-light: #f6f8fa;
+  --Grey-light: #d1d9e0;
+  --Grey-medium: #afb8c1;
+  --Grey-regular: #59636e;
+  --Grey-main: #1f2328;
+  --Grey-dark: #1f2328;
+  --Grey-extra-dark: #1f2328;
+
+  --gh-border: #d1d9e0;
+  --gh-canvas-subtle: #f6f8fa;
+  --code-bg: rgba(175, 184, 193, 0.2);
+  --link-color: #0969da;
+
+  /* Override target used by buildStyleOverrideCss(); GitHub headings are dark. */
+  --brand-main: #1f2328;
+  --brand-light: #59636e;
+  --brand-medium: #59636e;
+  --brand-regular: #59636e;
+  --brand-dark: #1f2328;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+body,
+.markdown-body,
+.github-markdown-body,
+.github-markdown-content {
+  font-family: var(--font-body, sans-serif);
+  color: var(--Grey-dark);
+  background-color: var(--page-bg, transparent);
+  font-size: var(--fs-body, 9pt);
+  line-height: 1.5;
+}
+
+/* ── Layout helpers ──────────────────────────────────────────────────────── */
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  height: 120px;
+}
+
+.github-markdown-content {
+  padding: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+.github-markdown-body {
+  padding: 0;
+}
+
+.github-markdown-body h1,
+.github-markdown-body h2,
+.github-markdown-body h3,
+.github-markdown-body h4,
+.github-markdown-body h5,
+.github-markdown-body h6 {
+  font-family: var(--font-heading, sans-serif);
+  color: var(--brand-main);
+  font-weight: 600;
+}
+
+/* GitHub gives the two top levels a bottom rule, and dims h6. */
+.github-markdown-body h1,
+.github-markdown-body h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--gh-border);
+}
+.github-markdown-body h6 { color: var(--Grey-regular); }
+
+/* Heading sizes come from theme.json (fontSize.h1…h6 → --fs-h1…--fs-h6). */
+.github-markdown-body h1 { font-size: var(--fs-h1, 2em); }
+.github-markdown-body h2 { font-size: var(--fs-h2, 1.5em); }
+.github-markdown-body h3 { font-size: var(--fs-h3, 1.25em); }
+.github-markdown-body h4 { font-size: var(--fs-h4, 1em); }
+.github-markdown-body h5 { font-size: var(--fs-h5, 0.875em); }
+.github-markdown-body h6 { font-size: var(--fs-h6, 0.85em); }
+
+/* Hide YAML frontmatter table (explicitly wrapped during markdown processing) */
+.frontmatter-table {
+  display: none;
+}
+
+/* Always show cover info table */
+.cover-info table {
+  display: table;
+}
+
+.no-export {
+  display: none;
+}
+
+.page-break-before {
+  break-before: page;
+}
+
+/* ── Links ───────────────────────────────────────────────────────────────── */
+.github-markdown-body a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+.github-markdown-body a:hover {
+  text-decoration: underline;
+}
+
+/* ── Table of Contents ───────────────────────────────────────────────────── */
+
+nav.toc ul {
+  list-style: none;
+  padding-left: 1.2em;
+}
+
+nav.toc > ul {
+  padding-left: 0;
+}
+
+nav.toc li {
+  margin: 0.2em 0;
+}
+
+/* PDF pipeline (default): leader() + target-counter(), no flex. WeasyPrint
+   70's target-counter() silently resolves to 0 when its generated content
+   sits inside a flex item's pseudo-element (verified: an identical rule
+   outside a flex container resolves correctly) -- every TOC in every theme
+   hit this. leader() is the CSS Paged Media primitive built for exactly this
+   "text ... dots ... page number" shape and needs no flex layout at all. One
+   trade-off: values inside a single pseudo-element's content share one
+   style, so the dots can no longer be dimmed independently of the number --
+   both render at the opacity below.
+   HTML export pipeline (.html-export below): leader()/target-counter() are
+   CSS Paged Media features no browser implements -- Chrome treats the whole
+   declaration as invalid and drops the pseudo-element entirely, silently
+   losing the dot leader too. Page numbers are meaningless in a continuously
+   scrolling export anyway, so it gets its own rule: the original flex +
+   border-bottom leader, with no page number. */
+nav.toc a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+nav.toc a::after {
+  content: leader(dotted) target-counter(attr(href), page);
+  font-size: 9pt;
+  color: inherit;
+  opacity: 0.7;
+}
+
+body.html-export nav.toc a {
+  display: flex;
+  align-items: baseline;
+}
+
+body.html-export nav.toc a::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1.5px dotted currentColor;
+  margin: 0 0.5em 0.2em;
+  opacity: 0.5;
+  font-size: inherit;
+}
+
+/* Indent levels */
+nav.toc > ul > li > a {
+  font-size: 9pt;
+}
+nav.toc > ul > li > ul > li > a {
+  padding-left: 0.8em;
+  font-size: 9pt;
+}
+nav.toc > ul > li > ul > li > ul > li > a {
+  padding-left: 1.6em;
+  font-size: 9pt;
+}
+nav.toc > ul > li > ul > li > ul > li > ul > li > a {
+  padding-left: 2.4em;
+  font-size: 9pt;
+}
+nav.toc > ul > li > ul > li > ul > li > ul > li > ul > li > a {
+  padding-left: 3.2em;
+  font-size: 9pt;
+}
+nav.toc > ul > li > ul > li > ul > li > ul > li > ul > li > ul > li > a {
+  padding-left: 4.0em;
+  font-size: 9pt;
+}
+
+/* ── Heading anchor links (markdown-it-anchor) ───────────────────────────── */
+
+.github-markdown-body h1 a,
+.github-markdown-body h2 a,
+.github-markdown-body h3 a,
+.github-markdown-body h4 a,
+.github-markdown-body h5 a,
+.github-markdown-body h6 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+
+table {
+  border-collapse: collapse;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+/* Keep a row intact across a page break — otherwise a row with one taller
+   (wrapped) cell can split: short single-line cells render on the first
+   page, the wrapped cell's text defers entirely to the next, and the row's
+   bottom border never paints because the row hasn't visually closed yet. */
+table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+/* Table — github: authentic GitHub (light-gray header, thin gray grid, zebra) */
+.github-markdown-body table th,
+.github-markdown-body table td { border: 1px solid var(--gh-border); padding: 6px 13px; }
+.github-markdown-body table thead tr { background-color: var(--gh-canvas-subtle); }
+.github-markdown-body table thead tr th { color: #1f2328; border-color: var(--gh-border); font-weight: 600; }
+.github-markdown-body table tr:nth-child(2n) { background-color: var(--gh-canvas-subtle); }
+
+/* ── GitHub Alerts ───────────────────────────────────────────────────────── */
+
+.markdown-alert {
+  padding: 0.6em 1em;
+  margin: 1em 0;
+  border-left: 4px solid;
+  border-radius: 0 4px 4px 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Shadows read poorly at print resolution in WeasyPrint's output, so this
+   card-lift effect is HTML-export only. */
+body.html-export .markdown-alert {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-weight: 600;
+  margin-bottom: 0.4em;
+  font-size: 0.95em;
+}
+
+.markdown-alert-title svg {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+.markdown-alert-note { border-color: #0969da; background: #dbeafe; }
+.markdown-alert-note .markdown-alert-title,
+.markdown-alert-note .markdown-alert-title svg path { color: #0969da; fill: #0969da; }
+
+.markdown-alert-tip { border-color: #1a7f37; background: #dcfce7; }
+.markdown-alert-tip .markdown-alert-title,
+.markdown-alert-tip .markdown-alert-title svg path { color: #1a7f37; fill: #1a7f37; }
+
+.markdown-alert-important { border-color: #8250df; background: #ede9fe; }
+.markdown-alert-important .markdown-alert-title,
+.markdown-alert-important .markdown-alert-title svg path { color: #8250df; fill: #8250df; }
+
+.markdown-alert-warning { border-color: #9a6700; background: #fef9c3; }
+.markdown-alert-warning .markdown-alert-title,
+.markdown-alert-warning .markdown-alert-title svg path { color: #9a6700; fill: #9a6700; }
+
+.markdown-alert-caution { border-color: #cf222e; background: #fee2e2; }
+.markdown-alert-caution .markdown-alert-title,
+.markdown-alert-caution .markdown-alert-title svg path { color: #cf222e; fill: #cf222e; }
+
+/* ── Admonitions ─────────────────────────────────────────────────────────────
+   Matches MkDocs Material color semantics, VS Code / Docusaurus class naming.
+   WeasyPrint-safe: no :has(), no custom properties, flat rgba() fills.        */
+
+.admonition {
+  border-radius: 4px;
+  border-left: 4px solid transparent;
+  margin: 1.25em 0;
+  overflow: hidden;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Shadows read poorly at print resolution in WeasyPrint's output, so this
+   card-lift effect is HTML-export only. */
+body.html-export .admonition {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.admonition-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admonition-heading svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.admonition-content {
+  padding: 10px 14px 12px;
+}
+
+.admonition-content > :first-child { margin-top: 0; }
+.admonition-content > :last-child  { margin-bottom: 0; }
+
+.admonition-note     { border-color: #448aff; background: rgba(68,138,255,0.04); }
+.admonition-note     > .admonition-heading { background: rgba(68,138,255,0.12); color: #1565c0; }
+
+.admonition-abstract { border-color: #00b0ff; background: rgba(0,176,255,0.04); }
+.admonition-abstract > .admonition-heading { background: rgba(0,176,255,0.12); color: #006db3; }
+
+.admonition-info     { border-color: #00b8d4; background: rgba(0,184,212,0.04); }
+.admonition-info     > .admonition-heading { background: rgba(0,184,212,0.12); color: #006978; }
+
+.admonition-tip      { border-color: #00bfa5; background: rgba(0,191,165,0.04); }
+.admonition-tip      > .admonition-heading { background: rgba(0,191,165,0.12); color: #007a6e; }
+
+.admonition-success  { border-color: #00c853; background: rgba(0,200,83,0.04); }
+.admonition-success  > .admonition-heading { background: rgba(0,200,83,0.12); color: #007325; }
+
+.admonition-question { border-color: #64dd17; background: rgba(100,221,23,0.04); }
+.admonition-question > .admonition-heading { background: rgba(100,221,23,0.12); color: #33691e; }
+
+.admonition-warning  { border-color: #ff9100; background: rgba(255,145,0,0.04); }
+.admonition-warning  > .admonition-heading { background: rgba(255,145,0,0.12); color: #b36200; }
+
+.admonition-failure  { border-color: #ff5252; background: rgba(255,82,82,0.04); }
+.admonition-failure  > .admonition-heading { background: rgba(255,82,82,0.12); color: #b71c1c; }
+
+.admonition-danger   { border-color: #ff1744; background: rgba(255,23,68,0.04); }
+.admonition-danger   > .admonition-heading { background: rgba(255,23,68,0.12); color: #c0002f; }
+
+.admonition-bug      { border-color: #f50057; background: rgba(245,0,87,0.04); }
+.admonition-bug      > .admonition-heading { background: rgba(245,0,87,0.12); color: #880037; }
+
+.admonition-example  { border-color: #7c4dff; background: rgba(124,77,255,0.04); }
+.admonition-example  > .admonition-heading { background: rgba(124,77,255,0.12); color: #4527a0; }
+
+.admonition-quote    { border-color: #9e9e9e; background: rgba(158,158,158,0.04); }
+.admonition-quote    > .admonition-heading { background: rgba(158,158,158,0.12); color: #424242; }
+
+/* ── Blockquotes ─────────────────────────────────────────────────────────── */
+blockquote {
+  border-left: 0.25em solid var(--gh-border);
+  margin: 0 0 16px;
+  padding: 0 1em;
+  color: var(--Grey-regular);
+}
+
+blockquote p { margin: 0.25em 0; }
+
+/* ── Inline code & code blocks ───────────────────────────────────────────── */
+:not(pre) > code {
+  background: var(--code-bg, rgba(175, 184, 193, 0.2));
+  border-radius: 6px;
+  padding: 0.2em 0.4em;
+  font-size: 85%;
+}
+
+/* ── Keyboard keys ────────────────────────────────────────────────────────── */
+kbd {
+  display: inline-block;
+  background: var(--code-bg, #f6f8fa);
+  border: 1px solid rgba(175, 184, 193, 0.4);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 0.15em 0.5em;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 85%;
+  line-height: 1.4;
+  box-shadow: inset 0 -1px 0 rgba(175, 184, 193, 0.4);
+}
+
+/* ── Highlight, subscript & superscript ──────────────────────────────────── */
+mark {
+  background: #fef08a;
+  color: inherit;
+  padding: 0.05em 0.2em;
+  border-radius: 2px;
+}
+
+sub, sup {
+  font-size: 0.75em;
+}
+
+/* ── Definition lists ─────────────────────────────────────────────────────── */
+dl {
+  margin: 1em 0;
+}
+dt {
+  font-weight: 600;
+}
+dd {
+  margin: 0 0 0.75em 1.5em;
+}
+
+/* ── Code-block line highlighting (```lang:2,4-6``` fence syntax) ──────────── */
+.hljs-line-highlight {
+  background: rgba(254, 240, 138, 0.35);
+  border-radius: 2px;
+}
+
+/* ── Table/figure captions ───────────────────────────────────────────────── */
+.caption {
+  font-size: 0.85em;
+  color: #666;
+  font-style: italic;
+  margin: -0.5em 0 1em 0;
+}
+.caption-label {
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* ── Side-by-side columns (`::: columns` / `::: column`) ───────────────────── */
+.md-columns {
+  display: flex;
+  gap: 1.5em;
+  margin: 1em 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-column {
+  flex: 1;
+  min-width: 0;
+}
+.md-column > :first-child { margin-top: 0; }
+.md-column > :last-child { margin-bottom: 0; }
+
+/* ── Collapsible details — always expanded in the PDF; a real, working
+   toggle when the standalone HTML export is opened in a browser. ─────────── */
+details {
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  padding: 0.5em 1em;
+  margin: 1em 0;
+}
+details > summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+details > summary + * {
+  margin-top: 0.5em;
+}
+
+/* ── Auto-numbered headings (frontmatter: Numbered Headings) ──────────────── */
+.heading-number { margin-right: 0.25em; }
+
+/* ── Cross-references with live page numbers ──────────────────────────────────
+   Mark any internal link `[text](#anchor){.page-ref}` to have the resolved page
+   number appended at print time. */
+a.page-ref::after {
+  content: " (page " target-counter(attr(href), page) ")";
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+/* ── List of Tables / List of Figures ─────────────────────────────────────── */
+nav.caption-index { margin: 1.5em 0; }
+nav.caption-index .caption-index-heading { margin-bottom: 0.5em; }
+nav.caption-index ul { list-style: none; padding-left: 0; }
+nav.caption-index li { margin: 0.2em 0; }
+nav.caption-index a {
+  display: flex;
+  align-items: baseline;
+  text-decoration: none;
+  color: inherit;
+  font-size: 9pt;
+}
+nav.caption-index a::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1.5px dotted currentColor;
+  margin: 0 0.5em 0.2em;
+  opacity: 0.5;
+}
+nav.caption-index a::before {
+  content: target-counter(attr(href), page);
+  font-size: 9pt;
+  order: 3;
+  flex-shrink: 0;
+}
+
+/* ── Code line numbers (frontmatter: Code Line Numbers) ───────────────────────
+   Every code line is always wrapped in .code-line; the counter only renders
+   when the body opts in, so the wrapping costs nothing by default. */
+.code-line { display: inline-block; width: 100%; }
+body.code-line-numbers pre.hljs { counter-reset: code-line; }
+body.code-line-numbers pre.hljs .code-line {
+  /* Hanging indent: the gutter is reserved with padding, then the first line is
+     pulled back into it by a negative text-indent. A long line that soft-wraps
+     therefore continues at the gutter edge, vertically aligned with the line
+     above, instead of sliding back under the line numbers.
+     Stays inline-block (not block): the markup keeps a real newline between
+     line spans so the code copies out intact, and a block box would render that
+     newline as a second line break — double-spacing every listing. */
+  padding-left: 3.5em;
+  text-indent: -3.5em;
+  box-sizing: border-box;
+}
+body.code-line-numbers pre.hljs .code-line::before {
+  counter-increment: code-line;
+  content: counter(code-line);
+  display: inline-block;
+  width: 2.5em;
+  margin-right: 1em;
+  text-align: right;
+  opacity: 0.4;
+  text-indent: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Watermark (frontmatter: Watermark) ───────────────────────────────────────
+   WeasyPrint repeats position:fixed boxes on every page, so one element in the
+   source stamps the whole document. */
+#page-watermark {
+  position: fixed;
+  top: 42%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  transform: rotate(-30deg);
+  font-family: var(--font-heading, sans-serif);
+  font-size: 72pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.07);
+  z-index: 1000;
+}
+
+/* ── Classification label (frontmatter: Classification) ───────────────────── */
+#classification-header {
+  font-family: var(--page-font, var(--font-heading, sans-serif));
+  font-size: 9pt;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: right;
+}
+#classification-header i { margin-right: 0.3em; }
+
+/* Phosphor duotone is two stacked glyph layers: ::before is the filled
+   silhouette (shipped at 20% opacity), ::after the line art. Taking the
+   silhouette to full strength in the classification colour and forcing the line
+   art black gives a tinted shield with a black outline. */
+#classification-header .ph-duotone::before { opacity: 1; }
+#classification-header .ph-duotone::after  { color: #000; }
+
+.classification-public       { color: #14a10f; }
+.classification-internal     { color: #eaa300; }
+.classification-confidential { color: #f7630a; }
+
+/* ── Landscape pages (`::: landscape`) ────────────────────────────────────────
+   Rotates just the wrapped block onto its own landscape sheet — for wide tables
+   that would otherwise be squeezed into the portrait text column. The @page
+   rule itself lives in page.css, where the paper size is a template token. */
+.md-landscape {
+  page: landscape;
+  break-before: page;
+  break-after: page;
+}
+
+/* A rotated sheet is far shorter than a portrait one (A4: 210mm vs 297mm), so a
+   tall figure that fits portrait will run off the bottom here and be clipped —
+   `break-inside: avoid` cannot rescue an element taller than its own page.
+   Both caps are derived from the real paper size and margins in css.ts. */
+.md-landscape img,
+.md-landscape .diagram-figure > img,
+.md-landscape svg {
+  max-height: var(--page-usable-height-landscape, 160mm);
+  width: auto;
+  object-fit: contain;
+}
+
+/* ── Portrait pages (`::: portrait`) ──────────────────────────────────────────
+   The mirror of `.md-landscape`: forces one upright sheet, which is what a
+   landscape document (`Orientation: landscape`) needs for a page of ordinary
+   prose. Inert in a portrait document, where it simply matches the default. */
+.md-portrait {
+  page: portrait;
+  break-before: page;
+  break-after: page;
+}
+
+.md-portrait img,
+.md-portrait .diagram-figure > img,
+.md-portrait svg {
+  max-height: var(--page-usable-height-portrait, 240mm);
+  width: auto;
+  object-fit: contain;
+}
+
+.diagram-figure > img {
+  max-height: var(--page-usable-height, 240mm);
+}
+
+/* ── Print typography: no stranded lines, no orphaned headings ────────────── */
+p, li, blockquote { orphans: 3; widows: 3; }
+h1, h2, h3, h4, h5, h6 { break-after: avoid-page; break-inside: avoid; }
+figure, .caption { break-inside: avoid; }
+.caption { break-before: avoid; }
+
+/* ── Redline marks ─────────────────────────────────────────────────────────
+   The revision tint lives on the HTML tags <ins> and <del>, so that plain
+   markdown stays portable: ~~x~~ is an ordinary strikethrough here just as it
+   is on GitHub, and ++x++ a plain underline (markdown.ts marks it .md-plain),
+   neither implying a tracked revision.                                     */
+ins {
+  background: rgba(34, 134, 58, 0.14);
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(34, 134, 58, 0.7);
+  padding: 0.05em 0.2em;
+  border-radius: 2px;
+}
+del {
+  background: rgba(203, 36, 49, 0.10);
+  text-decoration-color: rgba(203, 36, 49, 0.7);
+  padding: 0.05em 0.2em;
+  border-radius: 2px;
+}
+
+/* ++x++ from markdown: an <ins> tag, but plain — no revision tint. */
+ins.md-plain {
+  background: none;
+  text-decoration-color: currentColor;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* ── Spanning table cells ({colspan=2} / {rowspan=2}) ─────────────────────── */
+table td[colspan], table th[colspan],
+table td[rowspan], table th[rowspan] { vertical-align: middle; }
+
+pre {
+  background: var(--gh-canvas-subtle);
+  border-radius: 6px;
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+}
+
+/* ── Horizontal rule ─────────────────────────────────────────────────────── */
+hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: var(--gh-border);
+  border: 0;
+}
+
+/* ── Content images ──────────────────────────────────────────────────────────
+   Constrain body images to the page content area.
+   max-width: 100% prevents overflow beyond the text column width.
+   max-height: 220mm prevents a single image from overflowing a full A4 page.
+   height/width: auto preserve the aspect ratio under either constraint.      */
+.github-markdown-content img {
+    max-width: 100%;
+    max-height: 220mm;
+    width: auto;
+    height: auto;
+    display: block;
+    margin: 0.75em auto;
+}
+
+/* ── Abbreviation glossary ─────────────────────────────────────────── */
+/* Only the page break is glossary-specific. The table carries no look of its
+   own, so it inherits this theme's ordinary table styling and always matches
+   the tables written in the document. */
+.glossary-section {
+    page-break-before: always;
+    break-before: always;
+}
+.glossary-abbr {
+    font-weight: bold;
+    white-space: nowrap;
+}

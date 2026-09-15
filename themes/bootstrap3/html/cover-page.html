@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+  cover-page.html — "L3 Angled Facets" cover for the bootstrap3 theme.
+  ─────────────────────────────────────────────────────────
+  Hero photo across the top; three overlapping brand-colour facets fill the
+  bottom. A dark title band with an angled brand notch carries a two-tier
+  headline; details sit on the facets below. Square logo badge top-left.
+
+  Template tokens (replaced at export time):
+    {{COVER_TITLE_MAIN}}  Primary title line (before a separating dash/colon)
+    {{COVER_SUBTITLE}}    Subtitle (after the separator), or empty
+    {{COVER_INFO_ROWS}}   Zero or more <span> pairs for the info table
+    {{COVER_ADDRESS}}     Company address lines joined with <br>
+    {{LOGO_IMG}}    White brand logo <img>, or empty string
+    {{REVISION_TABLE}}    Full <table> fragment (revision history), or empty
+    {{COVER_LOGO_IMG}} Wrapped <img> for the cover logo, or empty string
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cover page preview</title>
+  <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/cover.css">
+</head>
+
+<body>
+
+  <div class="cover-page cover-l3" id="cover-page">
+    <div class="cover-l3-photo"></div>
+    <div class="cover-l3-decor"></div>
+    <div class="cover-l3-badge"><span class="cover-l3-logo">{{LOGO_IMG}}</span></div>
+    <div class="cover-l3-titleband">
+      <h1 class="cover-title">{{COVER_TITLE_MAIN}}</h1>
+      <p class="cover-subtitle">{{COVER_SUBTITLE}}</p>
+    </div>
+    <div class="cover-l3-block">
+      <div class="cover-l3-meta">
+        {{COVER_INFO_ROWS}}
+        <p class="cover-address">{{COVER_ADDRESS}}</p>
+        <p class="cover-slogan">{{COVER_SLOGAN}}</p>
+      </div>
+      <div class="cover-l3-rev">{{REVISION_TABLE}}</div>
+    </div>
+    <div class="cover-l3-cover">{{COVER_LOGO_IMG}}</div>
+  </div>
+
+</body>
+
+</html>

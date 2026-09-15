@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<!--
+  cover-page.html — Cover page template for platen-markdown-export.js
+  ─────────────────────────────────────────────────────────
+  Template tokens (replaced at export time):
+    {{COVER_TITLE_MAIN}} Primary title line (before a separating dash/colon)
+    {{COVER_SUBTITLE}}   Subtitle (after the separator), or empty
+    {{COVER_INFO_ROWS}}  Zero or more <span> pairs for the info table
+    {{COVER_ADDRESS}}    Company address lines joined with <br>
+    {{COVER_SLOGAN}}     Company slogan text
+    {{LOGO_IMG}}   Full <img> tag with base64 logo, or empty string
+    {{REVISION_TABLE}}   Full <table> fragment (revision history), or empty string
+    {{COVER_LOGO_IMG}} Wrapped <img> for the cover logo, or empty string
+
+  Standalone preview: open in a browser — sample data + Unsplash hero image
+  are injected by the <script> block at the bottom. That block and the entire
+  page shell are stripped by loadHtmlTemplate() during PDF export.
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cover page preview</title>
+  <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/cover.css">
+  <style>
+    /* ── Standalone preview shell ── not used during PDF export ─────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #c8c8c8;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    /* Hide token containers until JS fills them */
+    #cover-info-wrapper,
+    #cover-logo-slot,
+    #revision-table-slot,
+    #cover-footer-logo-slot {
+      visibility: hidden;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="cover-page" id="cover-page">
+    <div class="cover-top">
+      <h1 class="cover-title">{{COVER_TITLE_MAIN}}</h1>
+      <p class="cover-subtitle">{{COVER_SUBTITLE}}</p>
+    </div>
+    <div class="cover-middle">
+      <div id="cover-logo-slot">{{COVER_LOGO_IMG}}</div>
+      <div id="revision-table-slot">{{REVISION_TABLE}}</div>
+    </div>
+    <div class="cover-bottom">
+      <div class="cover-bottom-top">
+        <div id="cover-info-wrapper">{{COVER_INFO_ROWS}}</div>
+        <p class="cover-address">{{COVER_ADDRESS}}</p>
+      </div>
+      <div class="cover-bottom-bottom">
+        <p class="cover-slogan">{{COVER_SLOGAN}}</p>
+        <span id="cover-footer-logo-slot">{{LOGO_IMG}}</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      if (document.title !== 'Cover page preview') return;
+
+      // ── Sample data ───────────────────────────────────────────────────────
+      const TITLE = 'ACME Corporation — Showcase Document';
+
+      const INFO = [
+        { label: 'Author', value: 'John Doe' },
+        { label: 'Date', value: '04-05-2026' },
+        { label: 'Revision', value: '3' },
+        { label: 'Status', value: 'Work in Progress' },
+      ];
+
+      const ADDRESS = 'ACME Corporation<br>1742 Ironwood Parkway<br>Meridian Falls, OH 44092<br>United States';
+      const SLOGAN = 'Fresh ideas. Juicy results.';
+
+      const HERO_URL = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1600&q=80&fit=crop';
+      //Photo by <a href="https://unsplash.com/@thisisengineering?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">
+      // ThisisEngineering</a> on <a href="https://unsplash.com/photos/woman-in-white-long-sleeve-shirt-using-black-laptop-computer-ZPeXrWxOjRQ?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
+      const GRADIENT = 'linear-gradient(150deg, rgba(245,0,41,0.5) 0%, rgba(245,0,41,1) 90%)'; // Cherry medium (#f50029), overlay [0.5, 1]
+      const COVER_LOGO_URL = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMTYgNTYiIHdpZHRoPSIyMTYiIGhlaWdodD0iNTYiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iQUNNRSI+CiAgPHRpdGxlPkFDTUU8L3RpdGxlPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLXdpZHRoPSI2LjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cGF0aCBkPSJNOC42OCA0OS4xMyAyOSAxMC45MiA0OS4zMiA0OS4xMyIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIi8+CiAgICA8cGF0aCBkPSJNOTUuODkgMTQuNjZBMjAuNzUgMjAuNzUgMCAxIDAgOTUuODkgNDEuMzQiLz4KICAgIDxwYXRoIGQ9Ik0xMTMuMjUgNDguNzVWNy4yNUwxMzUgNDguNzUgMTU2Ljc1IDcuMjVWNDguNzUiLz4KICAgIDxwYXRoIGQ9Ik0yMDcuNzUgNy4yNUgxNzguNzVWNDguNzVIMjA3Ljc1Ii8+CiAgICA8cGF0aCBkPSJNMTc4Ljc1IDI4SDIwNC4yNSIvPgogIDwvZz4KPC9zdmc+Cg==';
+      const COVER_LOGO_BG = 'rgba(255, 255, 255, 0.7);';
+
+      // ACME white logo (SVG, base64-encoded)
+      const LOGO_SRC = 'data:image/svg+xml;base64,' + [
+        'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMTYg',
+        'NTYiIHdpZHRoPSIyMTYiIGhlaWdodD0iNTYiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iQUNNRSI+',
+        'CiAgPHRpdGxlPkFDTUU8L3RpdGxlPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIg',
+        'c3Ryb2tlLXdpZHRoPSI2LjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2lu',
+        'PSJyb3VuZCI+CiAgICA8cGF0aCBkPSJNOC42OCA0OS4xMyAyOSAxMC45MiA0OS4zMiA0OS4xMyIg',
+        'c3Ryb2tlLWxpbmVqb2luPSJtaXRlciIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIi8+CiAgICA8cGF0',
+        'aCBkPSJNOTUuODkgMTQuNjZBMjAuNzUgMjAuNzUgMCAxIDAgOTUuODkgNDEuMzQiLz4KICAgIDxw',
+        'YXRoIGQ9Ik0xMTMuMjUgNDguNzVWNy4yNUwxMzUgNDguNzUgMTU2Ljc1IDcuMjVWNDguNzUiLz4K',
+        'ICAgIDxwYXRoIGQ9Ik0yMDcuNzUgNy4yNUgxNzguNzVWNDguNzVIMjA3Ljc1Ii8+CiAgICA8cGF0',
+        'aCBkPSJNMTc4Ljc1IDI4SDIwNC4yNSIvPgogIDwvZz4KPC9zdmc+Cg=='
+      ].join('');
+
+      // ── Inject content ────────────────────────────────────────────────────
+      // Mirror the engine's title split: text after a spaced em/en-dash or a
+      // colon becomes the subtitle.
+      const titleParts = TITLE.match(/^(.*\S)\s+[—–]\s+(\S.*)$/) || TITLE.match(/^(.*\S):\s+(\S.*)$/);
+      document.querySelector('.cover-title').textContent = titleParts ? titleParts[1] : TITLE;
+      document.querySelector('.cover-subtitle').textContent = titleParts ? titleParts[2] : '';
+
+      const wrapper = document.getElementById('cover-info-wrapper');
+      wrapper.innerHTML = '';
+      const table = document.createElement('div');
+      table.className = 'cover-info-table';
+      table.innerHTML = INFO.map(r =>
+        `<span class="cover-info-label">${r.label}</span>` +
+        `<span class="cover-info-value">${r.value}</span>`
+      ).join('');
+      wrapper.appendChild(table);
+
+      document.querySelector('.cover-address').innerHTML = ADDRESS;
+      document.querySelector('.cover-slogan').textContent = SLOGAN;
+
+      const logoSlot = document.getElementById('cover-footer-logo-slot');
+      logoSlot.innerHTML = `<img id="cover-logo" src="${LOGO_SRC}" alt="ACME Corporation">`;
+
+      const REVISIONS = [
+        { revision: 'A', date: '2025-01-10', author: 'J. Carter', remarks: 'Initial concept' },
+        { revision: 'B', date: '2025-02-04', author: 'S. Bennett', remarks: 'Lifecycle section added' },
+        { revision: 'C', date: '2026-03-25', author: 'M. Whitfield', remarks: 'Review comments processed' },
+      ];
+
+      const revSlot = document.getElementById('revision-table-slot');
+      revSlot.innerHTML = `
+        <table class="revision-table">
+          <thead><tr>
+            <th>Revision</th><th>Date</th><th>Author</th><th>Comments</th>
+          </tr></thead>
+          <tbody>${REVISIONS.map(r =>
+        `<tr>
+              <td class="rev-center">${r.revision}</td>
+              <td>${r.date}</td>
+              <td>${r.author}</td>
+              <td>${r.remarks}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+      revSlot.style.visibility = 'visible';
+
+      const coverLogoSlot = document.getElementById('cover-logo-slot');
+      coverLogoSlot.innerHTML =
+        `<div class="cover-logo-wrapper" style="background-color:${COVER_LOGO_BG}"><img src="${COVER_LOGO_URL}" alt="Cover logo"></div>`;
+      coverLogoSlot.style.visibility = 'visible';
+
+      wrapper.style.visibility = 'visible';
+      logoSlot.style.visibility = 'visible';
+
+      const page = document.getElementById('cover-page');
+      page.style.backgroundImage = `${GRADIENT}, url('${HERO_URL}')`;
+      page.style.backgroundSize = 'cover';
+      page.style.backgroundPosition = 'center';
+    }());
+  </script>
+
+</body>
+
+</html>

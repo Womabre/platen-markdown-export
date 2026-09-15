@@ -1,0 +1,304 @@
+@page cover {
+    margin: 0;
+    @top-left      { content: ''; }
+    @top-right     { content: ''; }
+    @bottom-left   { content: ''; }
+    @bottom-center { content: ''; }
+    @bottom-right  { content: ''; }
+}
+
+.cover-page {
+    page: cover;
+    /* Full sheet, edge to edge: @page cover sets margin: 0. Driven by the
+       `Page Size` frontmatter (buildPageMetricsCss) so a larger sheet does not
+       leave the cover squeezed into an A4-sized corner; the fallbacks keep A4
+       for any path that does not emit the vars. */
+    width: var(--page-width, 210mm);
+    height: var(--page-height, 297mm);
+    page-break-after: always;
+    padding: 20mm 20mm 10mm 20mm;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* mixu: book cover — a lighter central panel framed by darker top & bottom */
+.cover-page {
+    background-image:
+        linear-gradient(0deg, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.30) 16%, rgba(0,0,0,0) 16%, rgba(0,0,0,0) 84%, rgba(0,0,0,0.30) 84%, rgba(0,0,0,0.30) 100%),
+        var(--cover-overlay),
+        var(--cover-photo) !important;
+    background-size: cover !important;
+    background-position: var(--cover-photo-pos-x, 50%) center !important;
+}
+
+.cover-title {
+    color: var(--cover-title-color, #ffffff);
+    font-size: 34pt;
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 700;
+    margin: 0 0 24px 0;
+    padding-bottom: 16px;
+    line-height: 1.2;
+    border-bottom-style: solid;
+    border-bottom-width: 3px;
+    border-bottom-color: var(--cover-title-color, rgba(255,255,255,1));
+}
+
+/* ── Middle section (logo + revision table) ──────────────── */
+.cover-middle {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ── Cover logo ───────────────────────────────────────── */
+#cover-logo-slot {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    max-height: 60mm;
+    overflow: visible;
+}
+
+#revision-table-slot {
+    flex-shrink: 0;
+}
+
+/* The wrapper is a single element — no pseudo-elements, no seam.
+   padding-right: 210mm extends the background box off the right page edge.
+   margin-right: -210mm cancels the layout effect so flex centering still
+   places the logo near the horizontal centre of the page.
+   flex-shrink: 0 prevents flexbox from compressing the padding back.
+   WeasyPrint clips the overflowing paint at the physical page boundary. */
+.cover-logo-wrapper {
+    display: flex;
+    align-items: center;
+    border-radius: 5mm 0 0 5mm;  /* round left side only; right bleeds off page */
+    /* The right padding must outrun the sheet so the panel bleeds off its edge,
+       and the negative margin cancels that padding's effect on layout so flex
+       still centres the logo. Both track the page width. */
+    padding: 5mm var(--page-width, 210mm) 5mm 5mm;
+    margin-right: calc(-1 * (var(--page-width, 210mm) - 9.25mm));
+    flex-shrink: 0;
+}
+
+.cover-logo-wrapper img {
+    min-height: 30mm;
+    max-height: 50mm;
+    min-width: 40mm;
+    max-width: 120mm;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+/* ── Revision table ─────────────────────────────────────── */
+/* All !important needed — theme.css general table rules bleed in via WeasyPrint */
+/* Cover tables (this one and the document-info rows) use the body font, like
+   the tables in the document; the title, subtitle and address keep the heading font. */
+.revision-table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-family: var(--font-body, sans-serif);
+    font-size: 9pt !important;
+    color: rgba(255,255,255,0.9) !important;
+    margin: 0 !important;
+    background-color: transparent !important;
+}
+
+.revision-table tr {
+    background-color: transparent !important;
+}
+
+.revision-table th,
+.revision-table td {
+    font-family: var(--font-body, sans-serif) !important;
+    padding: 6px 12px !important;
+    text-align: left;
+    border: none !important;
+    border-bottom: 0.1em solid rgba(255,255,255,0.2) !important;
+    background-color: transparent !important;
+    color: rgba(255,255,255,0.9) !important;
+}
+
+.revision-table td.rev-remarks {
+    /* Long remarks wrap at word boundaries; a value split mid-word reads as a
+       typo, and an author name broken across lines is worse than a short line. */
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+}
+
+.revision-table thead tr {
+    background-color: transparent !important;
+}
+
+.revision-table thead th {
+    font-family: var(--font-body, sans-serif) !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.05em !important;
+    color: rgba(255,255,255,0.55) !important;
+    border-bottom: 0.15em solid rgba(255,255,255,0.35) !important;
+    padding-bottom: 8px !important;
+}
+
+.revision-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.rev-center {
+    text-align: center !important;
+    font-family: var(--font-body, sans-serif) !important;
+    width: 2em;
+}
+
+/* ── Bottom bar ─────────────────────────────────────────── */
+.cover-bottom {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 80mm;
+    flex-shrink: 0;
+}
+
+.cover-bottom-top,
+.cover-bottom-bottom {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 40mm;
+}
+
+.cover-info-table {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 16px;
+    row-gap: 4px;
+}
+
+.cover-info-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 9pt;
+    font-family: var(--font-body, sans-serif);
+    white-space: nowrap;
+}
+
+.cover-info-value {
+    color: rgba(255,255,255,0.9);
+    font-size: 9pt;
+    font-family: var(--font-body, sans-serif);
+    white-space: nowrap;
+}
+
+.cover-slogan {
+    color: rgba(255,255,255,0.8);
+    font-size: 10pt;
+    font-family: var(--font-heading, sans-serif);
+    margin: 0;
+}
+
+.cover-bottom-bottom img {
+    height: 40px;
+    width: auto;
+}
+
+.cover-address {
+    text-align: right;
+    color: rgba(255,255,255,0.7);
+    font-size: 9pt;
+    font-family: var(--font-heading, sans-serif);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* mixu: classic book title page — centred upper-middle, short rule beneath */
+.cover-top { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.cover-middle { flex: 0 0 auto; }
+.cover-title { text-align: center; font-size: 36pt; border-bottom: none; padding-bottom: 0; }
+.cover-title::after { content: ""; display: block; width: 30mm; height: 3px; background: var(--cover-title-color, rgba(255,255,255,0.9)); margin: 18px auto 0; }
+.cover-bottom-top { flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.cover-address { text-align: center; }
+
+/* mixu v2: book cover — clean photo on top, solid brand zone below, centred title + short rule */
+.cover-page {
+    background-image:
+        linear-gradient(182deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 55%, var(--brand-main) 55%, var(--brand-main) 100%),
+        var(--cover-photo) !important;
+    background-size: cover !important;
+    background-position: center top !important;
+}
+.cover-top { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; }
+.cover-middle { flex: 0 0 auto; }
+.cover-title { background: rgba(0,0,0,0.40); border: none; text-align: center; margin: 0 -20mm 0 -20mm; padding: 16px 20mm; }
+.cover-title::after { display: none; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   mixu: "Photo + Title Bar" cover — full-bleed hero photo with a solid
+   brand-colour bar across the bottom carrying a two-tier headline and info.
+   ───────────────────────────────────────────────────────────────────────── */
+.cover-mx.cover-page {
+    display: block; position: relative; padding: 0;
+    background-color: #111;
+    background-image: none !important;  /* photo lives in .cover-mx-photo below */
+}
+
+/* full-bleed hero photo box (the bottom bar sits opaque over its lower part);
+   the top-darkening gradient keeps the logo/wordmark legible */
+.cover-mx-photo {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;
+    background-color: #111;
+    background-image:
+        linear-gradient(180deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 60%),
+        var(--cover-photo);
+    background-size: cover;
+    background-position: var(--cover-photo-pos-x, 50%) center;
+    background-repeat: no-repeat;
+}
+.cover-mx-top { position: absolute; top: 20mm; left: 22mm; right: 22mm; z-index: 2; display: flex; align-items: center; gap: 5mm; }
+.cover-mx-logo img, .cover-mx-logo svg { height: 12mm; width: auto; display: block; }
+.cover-mx-bar {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 1;
+    background: var(--brand-main);
+    padding: 13mm 22mm 15mm;
+    display: flex; flex-direction: column; gap: 6mm;
+}
+.cover-mx-rule { display: block; width: 36mm; height: 1mm; background: #fff; margin-bottom: 4mm; }
+.cover-mx .cover-title { color: var(--cover-title-color, #fff); font-family: var(--font-heading, sans-serif); font-size: 36pt; font-weight: 800; line-height: 1.02; letter-spacing: -0.01em; margin: 0; padding: 0; background: none; border: none; }
+.cover-mx .cover-title::before { content: none; display: none; }
+.cover-mx .cover-subtitle { color: var(--cover-title-color, rgba(255,255,255,0.85)); font-size: 18pt; font-weight: 300; margin: 3mm 0 0; }
+.cover-mx .cover-subtitle:empty { display: none; }
+.cover-mx-meta { display: flex; align-items: flex-end; justify-content: space-between; gap: 12mm; }
+.cover-mx .cover-info-label { color: rgba(255,255,255,0.6); }
+.cover-mx .cover-info-value { color: #fff; font-weight: 600; }
+.cover-mx .cover-address { text-align: right; color: rgba(255,255,255,0.8); }
+.cover-mx-rev .revision-table { font-size: 8pt !important; }
+/* cover logo: centred publisher colophon — a light plinth on the title axis,
+   floating in the open hero photo above the bottom title bar (book title-page device) */
+.cover-mx-cover { position: absolute; top: 88mm; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; }
+.cover-mx-cover img { min-height: 0; min-width: 0; max-height: 20mm; max-width: 80mm; width: auto; height: auto; display: block; }
+/* No background here: the plate colour comes solely from the frontmatter
+   `Cover Logo: Background` inline style (bare logo when omitted). The padding,
+   margin and border-radius fully neutralise the base .cover-logo-wrapper
+   bleed geometry so no second box can show. display must be `flex` (not
+   `inline-flex`): WeasyPrint paints an inline-flex item's background twice,
+   producing a nested double plate. */
+.cover-mx-cover .cover-logo-wrapper { display: flex; flex: 0 0 auto; align-items: center; padding: 6mm 9mm; margin: 0; border-radius: 1.5mm; }
+
+/* corrections: solid dark title bar (var-in-shorthand didn't resolve), white
+   left-aligned title, kill leaked centring + underline */
+.cover-mx-bar { background: #161616; background-color: #161616; }
+.cover-mx .cover-title { text-align: left; color: var(--cover-title-color, #ffffff); }
+.cover-mx .cover-title::after { content: none; display: none; }
+
+/* `Cover Slogan: false` / `Cover Address: false` empty the slot rather than
+   remove the element, so collapse it and let the layout close up. */
+.cover-slogan:empty,
+.cover-address:empty { display: none; }

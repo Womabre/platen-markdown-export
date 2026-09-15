@@ -1,0 +1,110 @@
+{
+  "name": "Platen",
+  "slogan": "Markdown Export",
+  "address": [],
+  "logo": "logos/platen-logo.svg",
+  "logoWhite": "logos/platen-logo-white.svg",
+  "logos": {
+    "Wordmark": "logos/platen-wordmark.svg",
+    "Logo": "logos/platen-logo.svg"
+  },
+  "css": {
+    "stylesheet": "css/theme.css",
+    "page": "css/page.css",
+    "cover": "css/cover.css"
+  },
+  "html": {
+    "cover": "html/cover-page.html",
+    "revision": "html/revision-table.html"
+  },
+  "fonts": [],
+  "fontFamily": {
+    "body": "Georgia, \"Times New Roman\", serif",
+    "heading": "\"Songti SC\", Georgia, \"Times New Roman\", serif"
+  },
+  "fontSize": {
+    "body": "10.5pt",
+    "h1": "2.5em",
+    "h2": "1.65em",
+    "h3": "1.2em",
+    "h4": "1em",
+    "h5": "0.9em",
+    "h6": "0.85em"
+  },
+  "defaultPalette": "Ink",
+  "palettes": {
+    "Ink": {
+      "extraLight": "#f0eeea",
+      "light": "#c9c4bc",
+      "main": "#252522",
+      "regular": "#74716b",
+      "medium": "#969188",
+      "dark": "#191917",
+      "extraDark": "#111110"
+    },
+    "Oxblood": {
+      "extraLight": "#f4e8e5",
+      "light": "#d3aaa1",
+      "main": "#713b3e",
+      "regular": "#99595b",
+      "medium": "#b97c78",
+      "dark": "#51272b",
+      "extraDark": "#30191c"
+    },
+    "Forest": {
+      "extraLight": "#e9eee7",
+      "light": "#afc1ac",
+      "main": "#365745",
+      "regular": "#5d7d65",
+      "medium": "#85a18a",
+      "dark": "#263e32",
+      "extraDark": "#17271f"
+    },
+    "Indigo": {
+      "extraLight": "#e9ecf3",
+      "light": "#b3bdd4",
+      "main": "#3c4b70",
+      "regular": "#657598",
+      "medium": "#8c9cba",
+      "dark": "#29354f",
+      "extraDark": "#1a2234"
+    }
+  },
+  "styles": {
+    "none": {
+      "palette": "Ink",
+      "overlay": [
+        0.65,
+        1
+      ]
+    },
+    "Ink": {
+      "palette": "Ink",
+      "overlay": [
+        0.65,
+        1
+      ]
+    },
+    "Oxblood": {
+      "palette": "Oxblood",
+      "overlay": [
+        0.65,
+        1
+      ]
+    },
+    "Forest": {
+      "palette": "Forest",
+      "overlay": [
+        0.65,
+        1
+      ]
+    },
+    "Indigo": {
+      "palette": "Indigo",
+      "overlay": [
+        0.65,
+        1
+      ]
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+    "name": "Mixu",
+    "slogan": "",
+    "address": [],
+    "background": "",
+    "logo": "logos/logo.svg",
+    "logoWhite": "logos/logo-white.svg",
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+    "fonts": [],
+    "fontFamily": {
+        "body": "Helvetica, Arial, \"Liberation Sans\", FreeSans, sans-serif",
+        "heading": "Helvetica, Arial, \"Liberation Sans\", FreeSans, sans-serif"
+    },
+    "defaultPalette": "Book",
+    "palettes": {
+        "Book":         { "extraLight": "#d9d9d9", "light": "#666666", "main": "#000000", "regular": "#000000", "medium": "#333333", "dark": "#000000", "extraDark": "#000000" },
+        "Bootstrap":    { "extraLight": "#e0e0e0", "light": "#858585", "main": "#333333", "regular": "#2e2e2e", "medium": "#5c5c5c", "dark": "#242424", "extraDark": "#171717" },
+        "Bootstrap2col":{ "extraLight": "#dedede", "light": "#7a7a7a", "main": "#222222", "regular": "#1f1f1f", "medium": "#4e4e4e", "dark": "#181818", "extraDark": "#0f0f0f" },
+        "Gray":         { "extraLight": "#dedede", "light": "#7a7a7a", "main": "#222222", "regular": "#1f1f1f", "medium": "#4e4e4e", "dark": "#181818", "extraDark": "#0f0f0f" },
+        "Page":         { "extraLight": "#dedede", "light": "#7a7a7a", "main": "#222222", "regular": "#1f1f1f", "medium": "#4e4e4e", "dark": "#181818", "extraDark": "#0f0f0f" },
+        "Radar":        { "extraLight": "#dedede", "light": "#7a7a7a", "main": "#222222", "regular": "#1f1f1f", "medium": "#4e4e4e", "dark": "#181818", "extraDark": "#0f0f0f" }
+    },
+    "styles": {
+        "none": { "palette": "Book", "overlay": [1, 1] },
+        "Book": {
+            "palette": "Book",
+            "overlay": [0.92, 1],
+            "fontFamily": { "body": "Helvetica, Arial, \"Liberation Sans\", FreeSans, sans-serif", "heading": "Helvetica, Arial, \"Liberation Sans\", FreeSans, sans-serif" },
+            "cssVars": { "--Grey-dark": "#333333", "--link-color": "#cc0000", "--code-bg": "#eeeeee" }
+        },
+        "Bootstrap": {
+            "palette": "Bootstrap",
+            "overlay": [0.92, 1],
+            "fontFamily": { "body": "\"Helvetica Neue\", Helvetica, Arial, sans-serif", "heading": "\"Helvetica Neue\", Helvetica, Arial, sans-serif" },
+            "cssVars": { "--Grey-dark": "#333333", "--link-color": "#0088cc" }
+        },
+        "Bootstrap2col": {
+            "palette": "Bootstrap2col",
+            "overlay": [0.92, 1],
+            "background": "#f6f6f6",
+            "fontFamily": { "body": "\"Helvetica Neue\", Helvetica, Arial, sans-serif", "heading": "\"Helvetica Neue\", Helvetica, Arial, sans-serif" },
+            "cssVars": { "--Grey-dark": "#333333", "--link-color": "#0088cc", "--code-bg": "#ececec" }
+        },
+        "Gray": {
+            "palette": "Gray",
+            "overlay": [0.92, 1],
+            "background": "#ededed",
+            "fontFamily": { "body": "\"Helvetica Neue\", Helvetica, Arial, sans-serif", "heading": "\"Helvetica Neue\", Helvetica, Arial, sans-serif" },
+            "cssVars": { "--Grey-dark": "#333333", "--link-color": "#0088cc", "--code-bg": "#e3e3e3" }
+        },
+        "Page": {
+            "palette": "Page",
+            "overlay": [0.92, 1],
+            "background": "#f4f1ea",
+            "fontFamily": { "body": "\"PT Sans\", Helvetica, Arial, Tahoma, sans-serif", "heading": "\"PT Sans\", Helvetica, Arial, Tahoma, sans-serif" },
+            "fontImport": "https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap",
+            "cssVars": { "--Grey-dark": "#333333", "--link-color": "#3399cc", "--code-bg": "#ece7da" }
+        },
+        "Radar": {
+            "palette": "Radar",
+            "overlay": [0.92, 1],
+            "fontFamily": { "body": "\"PT Sans\", Helvetica, Arial, Tahoma, sans-serif", "heading": "\"PT Sans\", Helvetica, Arial, Tahoma, sans-serif" },
+            "fontImport": "https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap",
+            "cssVars": { "--Grey-dark": "#333333", "--link-color": "#3399cc" }
+        }
+    }
+}

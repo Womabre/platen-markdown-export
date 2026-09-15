@@ -1,0 +1,29 @@
+# Every text file checks out with LF, on every platform.
+#
+# This is not a style preference — it is a correctness requirement. The exporter
+# embeds its inputs byte-for-byte: theme SVGs and images become base64 `data:`
+# URIs, theme CSS is inlined into the document, and `pipeline.test.ts` compares
+# the result against a committed golden file whose `<style>` bodies and data URIs
+# are recorded as byte counts. A CRLF checkout changes those bytes, so the same
+# commit produces a different document on Windows than on macOS or Linux — which
+# is exactly what the first Windows CI run reported, as a logo whose base64 was
+# 12 bytes longer.
+#
+# Nothing in this repository needs CRLF: there are no .bat, .cmd or .ps1 files.
+* text=auto eol=lf
+
+# Genuinely binary — never inspected or converted.
+*.webp binary
+*.png  binary
+*.jpg  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.vsix binary
+
+# Byte-exact fixtures and rendered artifacts: belt and braces on top of the
+# repo-wide rule above.
+test-fixtures/**       -text
+themes/**/sample*.html -text

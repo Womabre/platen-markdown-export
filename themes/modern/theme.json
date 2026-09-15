@@ -1,0 +1,103 @@
+{
+    "name": "Modern",
+    "slogan": "Fresh ideas. Juicy results.",
+    "address": ["ACME Corporation", "1742 Ironwood Parkway", "Meridian Falls, OH 44092", "United States"],
+
+    "logo": "logos/acme-logo-combo-red.svg",
+    "logoWhite": "logos/acme-logo-white.svg",
+
+    "css": {
+        "stylesheet": "css/theme.css",
+        "page": "css/page.css",
+        "cover": "css/cover.css"
+    },
+    "html": {
+        "cover": "html/cover-page.html",
+        "revision": "html/revision-table.html"
+    },
+
+    "// fonts": "No embedded fonts — the PDF falls back to fontFamily's system-font stack. css/fonts.css imports Urbanist from Google Fonts for the HTML export.",
+    "fonts": [
+    ],
+    "fontFamily": {
+        "body": "Valley Sans, Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, Calibri, Helvetica, sans-serif",
+        "heading": "Rubik, Valley Sans, Urbanist, sans-serif"
+    },
+
+    "// logos": "Fruit-icon brand marks, selectable with the `Logo:` frontmatter key independently of `Style:`. Each is a simple original flat-colour fruit icon (not a full wordmark), uniformly named `logos/modern-logo-<fruit>.svg`. Every fruit palette now has one except Cyan and Grey, which aren't fruits — an unrecognised `Logo:` name is a hard error (exit 3), not a silent fallback, so those two must stay unset (or point at a real file path). Omit `Logo:` entirely to use the theme's house mark (Acme).",
+    "logos": {
+        "Blackcurrant": "logos/modern-logo-blackcurrant.svg",
+        "Blueberry":   "logos/modern-logo-blueberry.svg",
+        "Cherry":      "logos/modern-logo-cherry.svg",
+        "Dragonfruit": "logos/modern-logo-dragonfruit.svg",
+        "Gooseberry":  "logos/modern-logo-gooseberry.svg",
+        "Guava":       "logos/modern-logo-guava.svg",
+        "Kiwi":        "logos/modern-logo-kiwi.svg",
+        "Lemon":       "logos/modern-logo-lemon.svg",
+        "Lime":        "logos/modern-logo-lime.svg",
+        "Papaya":      "logos/modern-logo-papaya.svg",
+        "Plum":        "logos/modern-logo-plum.svg",
+        "Starfruit":   "logos/modern-logo-starfruit.svg",
+        "Tangerine":   "logos/modern-logo-tangerine.svg"
+    },
+
+    "// palettes": "Custom fruit-named palettes — bright, saturated, high-impact hues built for this theme (not mirrored from any upstream brand source). Each ramp holds the same hue across all 7 stops, moving from a pale extraLight tint down to a near-black extraDark shade; `medium` is the vivid, fully-saturated anchor tone. CSS variables are emitted from here by buildThemeVarsCss() as --<slug>-<stop>.",
+
+    "// paletteRoles": "Which stop a document's chrome draws from. `medium` is the vivid anchor tone for every colour palette, so `main: medium` is what makes headings, table headers and cover gradients read as bold and saturated instead of the pale `main` tint. Grey keeps its own mapping — `extraDark` reads better as body/border grey than the mid-tone `medium` stop. Absent palette or role → the identically-named stop.",
+    "paletteRoles": {
+        "Cherry"        : { "main": "dark", "light": "light" },
+        "Blueberry"     : { "main": "dark", "light": "light" },
+        "Lime"          : { "main": "dark", "light": "light" },
+        "Lemon"         : { "main": "dark", "light": "light" },
+        "Tangerine"     : { "main": "dark", "light": "light" },
+        "Plum"          : { "main": "dark", "light": "light" },
+        "Guava"         : { "main": "dark", "light": "light" },
+        "Dragonfruit"   : { "main": "dark", "light": "light" },
+        "Cyan"          : { "main": "dark", "light": "light" },
+        "Kiwi"          : { "main": "dark", "light": "light" },
+        "Starfruit"     : { "main": "dark", "light": "light" },
+        "Papaya"        : { "main": "dark", "light": "light" },
+        "Blackcurrant"  : { "main": "dark", "light": "light" },
+        "Gooseberry"    : { "main": "dark", "light": "light" },
+        "Grey"          : { "main": "extraDark", "light": "light" }
+    },
+
+    "// fruitNames": "Red=Cherry, Blue=Blueberry, Green=Lime, Yellow=Lemon, Orange=Tangerine, Purple=Plum, Pink=Guava, Magenta=Dragonfruit, Teal=Kiwi, Turquoise=Starfruit, Indigo=Blackcurrant, Chartreuse=Gooseberry. Cyan and Grey keep their plain names — no fruit reads as cyan, and grey isn't a fruit at all (recoloured to a cool Copic-toner grey rather than the old warm neutral). Papaya (coral), Blackcurrant (indigo) and Gooseberry (chartreuse) are bonus colours beyond the originally requested eleven.",
+    "defaultPalette": "Cherry",
+    "palettes": {
+        "Cherry"        : { "extraLight": "#f0dbde", "light": "#e9a5b0", "main": "#f25e77", "regular": "#ff143b", "medium": "#d60024", "dark": "#98001a", "extraDark": "#49121c" },
+        "Blueberry"     : { "extraLight": "#e2e7f3", "light": "#adbfeb", "main": "#6892f2", "regular": "#1f61ff", "medium": "#0043e0", "dark": "#0031a3", "extraDark": "#142752" },
+        "Lime"          : { "extraLight": "#bee4cb", "light": "#85e0a3", "main": "#38ef75", "regular": "#00ea4f", "medium": "#00ad3a", "dark": "#007025", "extraDark": "#0a2914" },
+        "Lemon"         : { "extraLight": "#f3f0e2", "light": "#ebe0ad", "main": "#f2dc68", "regular": "#ffda1f", "medium": "#e0bb00", "dark": "#a38800", "extraDark": "#524714" },
+        "Tangerine"     : { "extraLight": "#f3eae2", "light": "#ebcaad", "main": "#f2a968", "regular": "#ff871f", "medium": "#e06900", "dark": "#a34c00", "extraDark": "#523114" },
+        "Plum"          : { "extraLight": "#e5dbf0", "light": "#c4a5e9", "main": "#a35ef2", "regular": "#8326ed", "medium": "#6510c6", "dark": "#480b8d", "extraDark": "#2c1249" },
+        "Guava"         : { "extraLight": "#f8edf1", "light": "#efbdd2", "main": "#f57eb0", "regular": "#ff3b8d", "medium": "#ff026b", "dark": "#c80053", "extraDark": "#721d40" },
+        "Dragonfruit"   : { "extraLight": "#ecd0e3", "light": "#e59acf", "main": "#f150c1", "regular": "#ff05b4", "medium": "#c7008b", "dark": "#890060", "extraDark": "#3d0f2f" },
+        "Cyan"          : { "extraLight": "#c5e2e7", "light": "#8dd4e2", "main": "#42d3ef", "regular": "#00ccf4", "medium": "#0098b7", "dark": "#00667a", "extraDark": "#0c2b31" },
+        "Kiwi"          : { "extraLight": "#a8dcda", "light": "#6edad7", "main": "#20ede5", "regular": "#00d1ca", "medium": "#009591", "dark": "#005a57", "extraDark": "#061818" },
+        "Starfruit"     : { "extraLight": "#cceae3", "light": "#95e4d0", "main": "#4bf0c7", "regular": "#0cf2b9", "medium": "#09b88d", "dark": "#077d60", "extraDark": "#0e392e" },
+        "Papaya"        : { "extraLight": "#f8efed", "light": "#f0c8c0", "main": "#f59885", "regular": "#ff6445", "medium": "#ff3910", "dark": "#da2400", "extraDark": "#833121" },
+        "Blackcurrant"  : { "extraLight": "#d6d4ed", "light": "#a59ee6", "main": "#6555f1", "regular": "#220aff", "medium": "#1400cc", "dark": "#0e008e", "extraDark": "#151041" },
+        "Gooseberry"    : { "extraLight": "#e1edd4", "light": "#c4e69e", "main": "#a8f155", "regular": "#8cf910", "medium": "#6cc605", "dark": "#4c8b03", "extraDark": "#2a4110" },
+        "Grey"          : { "extraLight": "#f1f2f4", "light": "#cacfd4", "main": "#a3acb3", "regular": "#7c8a93", "medium": "#5a656d", "dark": "#394246", "extraDark": "#191c1f" }
+    },  
+
+    "styles": {
+        "none"            : { "palette": "Cherry", "overlay": [1, 1] },
+        "Cherry"          : { "image": "hero/modern-hero-cherry.webp",       "palette": "Cherry",       "overlay": [0.5, 1], "attribution": "Photo by Vino Li https://unsplash.com/@vinomamba24?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Blueberry"       : { "image": "hero/modern-hero-blueberry.webp",    "palette": "Blueberry",    "overlay": [0.5, 1], "attribution": "Photo by Melissa Belanger https://unsplash.com/@melissabelanger?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Lime"            : { "image": "hero/modern-hero-lime.webp",         "palette": "Lime",         "overlay": [0.5, 1], "attribution": "Photo by Vino Li https://unsplash.com/@vinomamba24?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Lemon"           : { "image": "hero/modern-hero-lemon.webp",        "palette": "Lemon",        "overlay": [0.5, 1], "attribution": "Photo by Ernest Porzi https://unsplash.com/@ernestporzi?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Tangerine"       : { "image": "hero/modern-hero-tangerine.webp",    "palette": "Tangerine",    "overlay": [0.5, 1], "attribution": "Photo by Jacqueline Brandwayn https://unsplash.com/@lajaxx?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Plum"            : { "image": "hero/modern-hero-plum.webp",         "palette": "Plum",         "overlay": [0.5, 1], "attribution": "Photo by Alexandra Kikot https://unsplash.com/@sandriniya?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Guava"           : { "image": "hero/modern-hero-guava.webp",        "palette": "Guava",        "overlay": [0.5, 1], "attribution": "Photo by Yuliia Martsynkevych https://unsplash.com/@yumartsy?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Dragonfruit"     : { "image": "hero/modern-hero-dragonfruit.webp",  "palette": "Dragonfruit",  "overlay": [0.5, 1], "attribution": "Photo by Zoshua Colah https://unsplash.com/@zoshuacolah?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Cyan"            : { "image": "hero/modern-hero-cyan.webp",         "palette": "Cyan",         "overlay": [0.5, 1], "attribution": "Photo by Margarida Afonso https://unsplash.com/@mrafonso1976?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Kiwi"            : { "image": "hero/modern-hero-kiwi.webp",         "palette": "Kiwi",         "overlay": [0.5, 1], "attribution": "Photo by Tom Paolini https://unsplash.com/@tom_paolini?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Starfruit"       : { "image": "hero/modern-hero-starfruit.webp",    "palette": "Starfruit",    "overlay": [0.5, 1], "attribution": "Photo by Hugo Kruip https://unsplash.com/@hugo1951?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Papaya"          : { "image": "hero/modern-hero-papaya.webp",       "palette": "Papaya",       "overlay": [0.5, 1], "attribution": "Photo by Bon Vivant https://unsplash.com/@bonvivant?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Blackcurrant"    : { "image": "hero/modern-hero-blackcurrant.webp", "palette": "Blackcurrant", "overlay": [0.5, 1], "attribution": "Photo by Anton https://unsplash.com/@doctor_mabuse?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Gooseberry"      : { "image": "hero/modern-hero-gooseberry.webp",   "palette": "Gooseberry",   "overlay": [0.5, 1], "attribution": "Photo by Rob Wicks https://unsplash.com/@robwicks?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" },
+        "Grey"            : { "image": "hero/modern-hero-cyan.webp",         "palette": "Grey",         "overlay": [0.5, 1], "attribution": "Photo by Margarida Afonso https://unsplash.com/@mrafonso1976?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" }
+    }
+}

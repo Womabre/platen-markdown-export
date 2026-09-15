@@ -1,0 +1,98 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="WlgcGyJB0b6snPP_ImTl">
+    <mxGraphModel dx="1417" dy="719" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="od-start" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e79da9;strokeColor=#ad001d;fontColor=#49121c;fontSize=12;fontStyle=1;" value="Shipment Arrives" vertex="1">
+          <mxGeometry height="70" width="150" x="40" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="od-receive" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#d5d9dd;strokeColor=#292f32;fontColor=#292f32;fontSize=12;" value="Receive &amp; Log Intake" vertex="1">
+          <mxGeometry height="70" width="160" x="250" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="od-qc" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e9c5a5;strokeColor=#b85600;fontColor=#523114;fontSize=12;fontStyle=1;" value="QC Passed?" vertex="1">
+          <mxGeometry height="100" width="150" x="470" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="od-store" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#7cde9d;strokeColor=#00852c;fontColor=#0a2914;fontSize=12;" value="Store in Cold Store" vertex="1">
+          <mxGeometry height="70" width="170" x="680" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="od-ledger" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#a5b9e9;strokeColor=#0037b8;fontColor=#142752;fontSize=12;" value="Update Inventory Ledger" vertex="1">
+          <mxGeometry height="70" width="180" x="910" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="od-reserve" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#bf9de7;strokeColor=#520da0;fontColor=#2c1249;fontSize=12;" value="Reserve for Order" vertex="1">
+          <mxGeometry height="70" width="170" x="1150" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="od-pick" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#bf9de7;strokeColor=#520da0;fontColor=#2c1249;fontSize=12;" value="Pick &amp; Pack" vertex="1">
+          <mxGeometry height="70" width="150" x="1380" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="od-end" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#7cde9d;strokeColor=#00852c;fontColor=#0a2914;fontSize=12;fontStyle=1;" value="Shipped to Buyer" vertex="1">
+          <mxGeometry height="70" width="160" x="1590" y="340" as="geometry" />
+        </mxCell>
+
+        <mxCell id="od-reject" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e79da9;strokeColor=#ad001d;fontColor=#49121c;fontSize=12;" value="Reject &amp; Return to Supplier" vertex="1">
+          <mxGeometry height="70" width="200" x="470" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="od-returned" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e79da9;strokeColor=#ad001d;fontColor=#49121c;fontSize=12;fontStyle=1;" value="Returned" vertex="1">
+          <mxGeometry height="70" width="150" x="730" y="500" as="geometry" />
+        </mxCell>
+
+        <mxCell id="od-erp" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#d5d9dd;strokeColor=#292f32;fontColor=#292f32;fontSize=11;" value="ERP System" vertex="1">
+          <mxGeometry height="60" width="170" x="880" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="od-buyer" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#d5d9dd;strokeColor=#292f32;fontColor=#292f32;fontSize=11;" value="Buyer Portal" vertex="1">
+          <mxGeometry height="60" width="170" x="1150" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="od-route" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#d5d9dd;strokeColor=#292f32;fontColor=#292f32;fontSize=11;" value="Route Planner" vertex="1">
+          <mxGeometry height="60" width="150" x="1380" y="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="od-e1" edge="1" parent="1" source="od-start" target="od-receive" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#5F5E5A;strokeWidth=2;html=1;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e2" edge="1" parent="1" source="od-receive" target="od-qc" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#5F5E5A;strokeWidth=2;html=1;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e3" edge="1" parent="1" source="od-qc" target="od-store" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#00852c;strokeWidth=2;fontColor=#00852c;fontSize=10;html=1;" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e4" edge="1" parent="1" source="od-qc" target="od-reject" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ad001d;strokeWidth=2;fontColor=#ad001d;fontSize=10;dashed=1;dashPattern=8 4;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" value="No">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e5" edge="1" parent="1" source="od-reject" target="od-returned" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ad001d;strokeWidth=2;html=1;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e6" edge="1" parent="1" source="od-store" target="od-ledger" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#5F5E5A;strokeWidth=2;html=1;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e7" edge="1" parent="1" source="od-ledger" target="od-reserve" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#5F5E5A;strokeWidth=2;html=1;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e8" edge="1" parent="1" source="od-reserve" target="od-pick" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#5F5E5A;strokeWidth=2;html=1;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e9" edge="1" parent="1" source="od-pick" target="od-end" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#5F5E5A;strokeWidth=2;html=1;" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="od-e10" edge="1" parent="1" source="od-erp" target="od-ledger" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#0037b8;strokeWidth=1.5;fontColor=#0037b8;fontSize=10;dashed=1;dashPattern=6 4;html=1;startArrow=classic;startFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="inventory sync">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e11" edge="1" parent="1" source="od-buyer" target="od-reserve" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#520da0;strokeWidth=1.5;fontColor=#520da0;fontSize=10;dashed=1;dashPattern=6 4;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="order request">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e12" edge="1" parent="1" source="od-route" target="od-pick" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#b85600;strokeWidth=1.5;fontColor=#b85600;fontSize=10;dashed=1;dashPattern=6 4;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" value="delivery schedule">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="od-e13" edge="1" parent="1" source="od-end" target="od-buyer" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#520da0;strokeWidth=1.5;fontColor=#520da0;fontSize=10;dashed=1;dashPattern=6 4;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" value="dispatch notice">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1830" y="260" />
+              <mxPoint x="1390" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

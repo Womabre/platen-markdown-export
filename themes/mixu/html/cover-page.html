@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+  cover-page.html — "Photo + Title Bar" cover for the mixu theme.
+  Full-bleed hero photo with a solid title bar across the bottom carrying a
+  two-tier headline, an accent rule and the document info.
+
+  Tokens: {{COVER_TITLE_MAIN}} {{COVER_SUBTITLE}}
+          {{COVER_INFO_ROWS}} {{COVER_ADDRESS}} {{LOGO_IMG}}
+          {{REVISION_TABLE}} {{COVER_LOGO_IMG}}
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cover page preview</title>
+  <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/cover.css">
+</head>
+
+<body>
+
+  <div class="cover-page cover-mx" id="cover-page">
+    <div class="cover-mx-photo"></div>
+    <div class="cover-mx-top">
+      <span class="cover-mx-logo">{{LOGO_IMG}}</span>
+    </div>
+    <div class="cover-mx-bar">
+      <div class="cover-mx-title-wrap">
+        <span class="cover-mx-rule"></span>
+        <h1 class="cover-title">{{COVER_TITLE_MAIN}}</h1>
+        <p class="cover-subtitle">{{COVER_SUBTITLE}}</p>
+      </div>
+      <div class="cover-mx-meta">
+        {{COVER_INFO_ROWS}}
+        <p class="cover-address">{{COVER_ADDRESS}}</p>
+        <p class="cover-slogan">{{COVER_SLOGAN}}</p>
+        <div class="cover-mx-rev">{{REVISION_TABLE}}</div>
+      </div>
+    </div>
+    <div class="cover-mx-cover">{{COVER_LOGO_IMG}}</div>
+  </div>
+
+</body>
+
+</html>
