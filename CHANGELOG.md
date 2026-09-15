@@ -8,6 +8,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-09-15
+
+### Changed
+
+- **No functional changes.** Repackaged to replace the withdrawn 1.0.1 and 1.0.2
+  releases, and contains everything listed under them.
+
 ## [1.0.2] - 2026-09-15
 
 ### Fixed
@@ -1145,7 +1152,6 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First tagged release.
 
-[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.0.2...HEAD
-[1.0.2]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.2
-[1.0.1]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.1
+[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.3
 [1.0.0]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.0

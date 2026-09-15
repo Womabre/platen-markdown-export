@@ -2,7 +2,7 @@
   "name": "platen-markdown-export-vscode",
   "displayName": "Platen Markdown Export",
   "description": "Export Markdown (or HTML) to print-quality PDF / standalone HTML via the platen-markdown-export CLI.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": "MIT",
   "private": true,
   "publisher": "Womabre",
