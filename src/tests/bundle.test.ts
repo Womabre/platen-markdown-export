@@ -5,10 +5,13 @@ import * as os   from 'os';
 import * as path from 'path';
 
 interface SharpTarget { os: string; cpu: string }
+interface PackageManifest { dependencies?: Record<string, string>; optionalDependencies?: Record<string, string> }
 
 /** The helpers `vscode-extension/scripts/bundle.js` exports for testing. */
 interface BundleScript {
     pruneToPaths(pkgDir: string, keep: string[]): void;
+    bundleRoots(manifest: PackageManifest): string[];
+    missingRoots(dir: string, manifest: PackageManifest): string[];
     reachablePackages(
         rootDeps: string[],
         manifestDeps: (name: string) => string[],
@@ -29,7 +32,7 @@ interface BundleScript {
 const bundleScript = require('../../vscode-extension/scripts/bundle.js') as BundleScript;
 
 const {
-    pruneToPaths, reachablePackages, sharpPackagesFor, parseTargets, ALL_SHARP_TARGETS, KEEP_ONLY,
+    pruneToPaths, bundleRoots, missingRoots, reachablePackages, sharpPackagesFor, parseTargets, ALL_SHARP_TARGETS, KEEP_ONLY,
 } = bundleScript;
 
 let tmpDir: string;
@@ -185,6 +188,54 @@ describe('reachablePackages', () => {
         const reachable = reachablePackages(['sharp'], graph({ sharp: platforms }), KEEP_ONLY);
 
         for (const p of platforms) assert.equal(reachable.has(p), true, `${p} must survive`);
+    });
+});
+
+// ── bundleRoots / missingRoots ────────────────────────────────────────────────
+
+describe('bundleRoots', () => {
+    it('roots the walk on optionalDependencies as well as dependencies', () => {
+        const roots = bundleRoots({ dependencies: { a: '1' }, optionalDependencies: { b: '1' } });
+        assert.deepEqual(roots.sort(), ['a', 'b']);
+    });
+
+    it('keeps an optional dependency that nothing else depends on — the playwright regression', () => {
+        // Rooted on `dependencies` alone, playwright was an orphan and the prune
+        // deleted it from every .vsix.
+        const manifest = { dependencies: { sharp: '1' }, optionalDependencies: { playwright: '1' } };
+        const reachable = reachablePackages(bundleRoots(manifest),
+            name => ({ playwright: ['playwright-core'] } as Record<string, string[]>)[name] ?? [], {});
+        assert.equal(reachable.has('playwright'), true);
+        assert.equal(reachable.has('playwright-core'), true);
+    });
+
+    it('includes every optionalDependency the CLI really declares', () => {
+        const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8')) as PackageManifest;
+        const optional = Object.keys(manifest.optionalDependencies ?? {});
+        assert.ok(optional.includes('playwright'), 'playwright is expected to be an optionalDependency');
+        for (const name of optional) assert.ok(bundleRoots(manifest).includes(name), `${name} must be a bundle root`);
+    });
+});
+
+describe('missingRoots', () => {
+    it('names a root with no package on disk, optional ones included', () => {
+        const dir = makePackage('missing-roots', {
+            'node_modules/sharp/package.json': '{}',
+            'node_modules/@antv/infographic/package.json': '{}',
+        });
+        const manifest = {
+            dependencies: { sharp: '1', '@antv/infographic': '1' },
+            optionalDependencies: { playwright: '1' },
+        };
+        assert.deepEqual(missingRoots(dir, manifest), ['playwright']);
+    });
+
+    it('is empty when every root is there', () => {
+        const dir = makePackage('all-roots', {
+            'node_modules/sharp/package.json': '{}',
+            'node_modules/playwright/package.json': '{}',
+        });
+        assert.deepEqual(missingRoots(dir, { dependencies: { sharp: '1' }, optionalDependencies: { playwright: '1' } }), []);
     });
 });
 

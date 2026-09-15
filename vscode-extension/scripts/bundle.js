@@ -299,9 +299,33 @@ function installedPackages(nodeModulesDir) {
 }
 
 /**
+ * The packages the bundle is walked out from: the CLI's `dependencies` and its
+ * `optionalDependencies`.
+ *
+ * An optional dependency is optional to *install*, not to ship: the CLI loads it
+ * whenever it is there. Rooting on `dependencies` alone is how playwright left
+ * every .vsix the day it became optional — nothing in the tree depended on it,
+ * so the prune deleted it, and Mermaid failed with "Playwright is not installed"
+ * on machines where no `npm install` could put it back within the bundled CLI's
+ * reach.
+ */
+function bundleRoots(manifest) {
+    return [
+        ...Object.keys(manifest.dependencies || {}),
+        ...Object.keys(manifest.optionalDependencies || {}),
+    ];
+}
+
+/** The bundle roots with no package in `dir`'s node_modules. */
+function missingRoots(dir, manifest) {
+    return bundleRoots(manifest)
+        .filter(name => !fs.existsSync(path.join(dir, 'node_modules', ...name.split('/'), 'package.json')));
+}
+
+/**
  * The set of packages something in the bundle can actually load.
  *
- * Walks out from the CLI's own production dependencies through
+ * Walks out from {@link bundleRoots} through
  * `dependencies` + `optionalDependencies` + `peerDependencies`. Optional deps
  * matter because sharp declares every platform binary as one, so the
  * cross-platform `@img/*` packages staged by `bundleMultiPlatformSharp` are
@@ -353,7 +377,7 @@ function pruneOrphanedPackages(stagingDir) {
         ];
     };
 
-    const rootDeps  = Object.keys(readJson(path.join(stagingDir, 'package.json')).dependencies || {});
+    const rootDeps  = bundleRoots(readJson(path.join(stagingDir, 'package.json')));
     const reachable = reachablePackages(rootDeps, manifestDeps);
 
     let freed = 0;
@@ -458,6 +482,13 @@ function smokeTest() {
     const work = fs.mkdtempSync(path.join(os.tmpdir(), 'pme-bundle-smoke-'));
 
     try {
+        // The exports below render no Mermaid, so they cannot notice playwright
+        // missing — and it was missing from every .vsix, unnoticed, while the
+        // prune ignored optionalDependencies. Check the roots by name instead.
+        const missing = missingRoots(BUNDLE_DIR, readJson(path.join(ROOT_DIR, 'package.json')));
+        if (missing.length) throw new Error(`the bundle is missing the CLI's own dependencies: ${missing.join(', ')}`);
+        log('found every dependency and optionalDependency of the CLI in the bundle');
+
         for (const [pkg, keep] of Object.entries(KEEP_ONLY)) {
             for (const rel of keep) {
                 execFileSync(process.execPath, ['-e',
@@ -573,4 +604,6 @@ if (require.main === module) {
     }
 }
 
-module.exports = { pruneToPaths, reachablePackages, sharpPackagesFor, parseTargets, ALL_SHARP_TARGETS, KEEP_ONLY };
+module.exports = {
+    pruneToPaths, bundleRoots, missingRoots, reachablePackages, sharpPackagesFor, parseTargets, ALL_SHARP_TARGETS, KEEP_ONLY,
+};

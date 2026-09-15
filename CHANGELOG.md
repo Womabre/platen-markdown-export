@@ -157,6 +157,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Mermaid diagrams render from the VS Code extension again.** The bundler
+  deletes packages the CLI cannot reach, and it started that walk from
+  `dependencies` only. Once `playwright` became an `optionalDependency`, nothing
+  reached it, so every `.vsix` shipped without it. Exporting a Mermaid diagram
+  then failed with "Playwright is not installed", and `npm install playwright`
+  could not help, because the bundled CLI only loads packages from its own
+  folder. The extension's Chromium setup failed the same way. The walk now
+  starts from `optionalDependencies` too, and the bundler fails the build when
+  any of the CLI's dependencies is missing from the bundle. Its smoke test
+  renders no Mermaid, so before this nothing checked.
+
 - **Cover tables now use the theme's body font.** Every theme's cover set the
   revision table and the document-details rows in `--font-heading`, while the
   tables in the document use the body font. That only shows where the two fonts
