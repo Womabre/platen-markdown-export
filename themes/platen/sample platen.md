@@ -95,6 +95,7 @@ Mode: pdf, html                             # pdf | html | debug — comma-separ
     - [List of Tables \& Figures](#list-of-tables--figures)
     - [Watermark](#watermark)
     - [Code Line Numbers](#code-line-numbers)
+    - [Copy Buttons](#copy-buttons)
     - [Trademark Symbols](#trademark-symbols)
     - [Classification](#classification)
     - [Frontmatter Variables](#frontmatter-variables)
@@ -813,6 +814,15 @@ interface ExportOptions {
     theme: string;
     mode: ("pdf" | "html")[];   // line 3 — highlighted and numbered
 }
+```
+
+### Copy Buttons
+
+In the HTML export every code block gets a **Copy** button: hover the block (it is always shown on a touch screen) and one click copies the code, without line numbers. `Copy Buttons: false` in the frontmatter keeps buttons only on blocks you flag with `copy`; `nocopy` opts one block out either way, and both combine with line highlighting. The PDF never shows a button. There the code stays selectable text.
+
+```powershell:2 copy
+$vault = Get-Service -Name 'AutodeskVault*'
+$vault | Restart-Service -Force   # line 2 — highlighted, and copied without the number
 ```
 
 ### Trademark Symbols

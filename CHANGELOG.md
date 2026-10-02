@@ -8,6 +8,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Copy buttons on code blocks in the HTML export.** Every code block gets a
+  Copy button that copies the code exactly, without line numbers. It is styled
+  from the block it sits on, and it confirms in the theme's accent colour.
+  `Copy Buttons: false` in the frontmatter keeps buttons only on blocks fenced
+  with a `copy` flag (` ```powershell copy `), and `nocopy` opts a single block
+  out. The buttons are built by a script in the exported page, so the PDF, which
+  runs no JavaScript, is unchanged.
+
 ### Fixed
 
 - **An export no longer waits on a dependency question already on screen.** The

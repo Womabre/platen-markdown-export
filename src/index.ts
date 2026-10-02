@@ -15,6 +15,7 @@ import { convertMarkdownToHtml, prepareSourceUpdates, type PendingSourceUpdate }
 import { inlineImages, injectLogoElements, checkLocalImages, type PageGeometry } from './images';
 import { buildCoverPage, buildHtmlBanner, HTML_BANNER_CSS, buildStyleOverrideCss, resolveStyleMainColor, validateDocumentColors } from './cover';
 import { setActiveTheme, applyStyleOverrides, applyLogoOverride, setThemeRoots } from './theme';
+import { buildCopyButtonCss, buildCopyButtonScript, copyAccentColor, documentWantsCopyButtons } from './copy-buttons';
 import { buildPageCss, buildPageMetricsCss, buildFallbackFontStyles, buildHljsStyleBlock, buildThemeVarsCss, HTML_BODY_CSS, buildHtmlDarkModeCss } from './css';
 import { buildIconStyles, inlineRemoteStylesheets, inlineLocalStylesheet, clearCssImportCache } from './stylesheets';
 import { injectTocWrapper, rebuildToc, inlineAlertIconColors, inlineAdmonitionIconColors, inlineHexColorCode, replaceTaskListInputs, wrapEmoji, numberHeadings, buildCaptionIndex, injectCaptionIndexes, buildWatermark, buildClassificationHeader, injectPageChrome, addBodyClasses, injectDocumentMetadata, injectCodeFontDefaults, TASK_LIST_CSS, HEADING_ICON_CSS, EMOJI_CSS, TABLE_FIT_CSS } from './html';
@@ -289,7 +290,7 @@ export async function buildHtmlExportPipeline(
     deps?: Set<string>,
 ): Promise<string> {
     const { title, documentInfo, revisions, revisionsVisible, coverLogo, style,
-            numberedHeadings, codeLineNumbers,
+            numberedHeadings, codeLineNumbers, copyButtons,
             classification, coverTitleColor } = fm;
 
     htmlContent = injectDocumentMetadata(htmlContent, { title, author: fm.author });
@@ -324,6 +325,7 @@ export async function buildHtmlExportPipeline(
 
     log('Injecting styles into <head>...');
     const iconStyles = await buildIconStyles(htmlContent);
+    const wantsCopy  = documentWantsCopyButtons(htmlContent, copyButtons);
     const headStyles = [
         buildThemeVarsCss(),
         `<style>${HTML_BODY_CSS}</style>`,
@@ -337,12 +339,20 @@ export async function buildHtmlExportPipeline(
         `<style>${EMOJI_CSS}</style>`,
         `<style>${TABLE_FIT_CSS}</style>`,
         `<style>${HTML_BANNER_CSS}</style>`,
+        wantsCopy ? buildCopyButtonCss(copyAccentColor(style)) : '',
         buildStyleOverrideCss(style),
         // Last: dark-mode overrides must follow the style override so their
         // !important heading rule wins under prefers-color-scheme: dark.
         buildHtmlDarkModeCss(resolveStyleMainColor(style)),
     ].filter(Boolean).join('\n');
     htmlContent = htmlContent.replace('</head>', literal(`${headStyles}\n</head>`));
+
+    // HTML export only: the buttons are built by this script, so the PDF —
+    // which never runs it — has nothing to hide (copy-buttons.ts).
+    if (wantsCopy) {
+        log('Adding copy buttons to code blocks...');
+        htmlContent = htmlContent.replace('</body>', literal(`${buildCopyButtonScript(copyButtons)}\n</body>`));
+    }
 
     // Mark body so banner + layout CSS can scope to html-export context
     htmlContent = addBodyClasses(htmlContent, ['html-export', codeLineNumbers && 'code-line-numbers']);

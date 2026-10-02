@@ -68,6 +68,8 @@ Running Header: true                 # top-left header tracks the current sectio
 List of Tables: true                 # index of captioned tables, after the TOC
 List of Figures: true                # index of captioned figures, after the TOC
 Code Line Numbers: true              # number every line of every fenced code block
+Copy Buttons: false                  # the one control that defaults ON: Copy button on every
+                                     # code block in the HTML export; false = only ```lang copy
 Trademark Symbols: true              # (c)/(r)/(tm) -> ©/®/™; off (default) keeps them literal
 Watermark: DRAFT                     # diagonal stamp; `true` reuses Status
 Classification: Internal             # Public | Internal | Confidential
@@ -105,6 +107,7 @@ Seven optional switches, all off unless set. Each theme's `sample *.md` enables 
 | `List of Tables`     | Emits a "List of Tables" index after the TOC, with live page numbers. Built from `Table:` captions; emits nothing if the document has none.                                                        |
 | `List of Figures`    | As above, for `Figure:` captions. Tables and figures are numbered independently.                                                                                                                   |
 | `Code Line Numbers`  | Numbers every line of every fenced code block. Pairs with the ` ```lang:2,4-6 ` line-highlighting syntax.                                                                                          |
+| `Copy Buttons`       | **On by default.** Gives every code block a Copy button in the HTML export; it shows on hover and copies the code without line numbers. `false` keeps buttons only on blocks fenced with a `copy` flag (` ```powershell copy `); a `nocopy` flag opts one block out either way. HTML only — the PDF never carries a button. |
 | `Trademark Symbols`  | Converts `(c)`, `(r)`, `(tm)` to ©/®/™. Off by default, so a literal parenthetical like `(R)` (e.g. a revision marker) isn't silently swapped for the registered-trademark glyph. Smart quotes and dash/ellipsis typography from `typographer` are unaffected either way. |
 | `Watermark`          | Stamps a faint diagonal label across every page. A string is used verbatim; `true` reuses the document's `Status`. Suppressed entirely once `Status` is `Released` / `Vrijgegeven` — a signed-off document is never stamped. PDF only.  |
 | `Classification`     | Prints a sensitivity label in the **top-right** margin — a Phosphor duotone shield (colour fill, black outline) plus the word: `Public` green, `Internal` amber, `Confidential` orange.            |

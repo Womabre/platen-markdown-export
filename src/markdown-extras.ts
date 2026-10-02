@@ -49,6 +49,40 @@ export function splitLangSpec(rawLang: string): [lang: string, rangeSpec: string
     return i === -1 ? [rawLang, ''] : [rawLang.slice(0, i), rawLang.slice(i + 1)];
 }
 
+// ── Copy-button flags (```powershell copy / ```powershell nocopy) ─────────────
+//
+// A bare word after the language in the fence info string. markdown-it hands it
+// to highlight() as `attrs`; markdown-it-attrs only claims `{...}`, so a bare
+// word reaches us intact and coexists with the `:2,4-6` range suffix.
+
+/** A per-block copy-button override, or null when the block follows `Copy Buttons`. */
+export type CopyFlag = 'on' | 'off' | null;
+
+const COPY_FLAGS: Record<string, CopyFlag> = { copy: 'on', nocopy: 'off' };
+
+/** Reads a `copy` / `nocopy` word from a fence's info-string attrs. Last one wins. */
+export function parseCopyFlag(attrs: string): CopyFlag {
+    let flag: CopyFlag = null;
+    for (const word of attrs.trim().split(/\s+/))
+        flag = COPY_FLAGS[word.toLowerCase()] ?? flag;
+    return flag;
+}
+
+/**
+ * The fence's language token, or the copy flag standing in for it: ```` ```copy ````
+ * on a plain-text block puts the flag where markdown-it expects a language.
+ */
+export function splitCopyFlagFromLang(rawLang: string, attrs: string): [rawLang: string, flag: CopyFlag] {
+    const asFlag = COPY_FLAGS[rawLang.toLowerCase()];
+    if (asFlag !== undefined) return ['', parseCopyFlag(`${rawLang} ${attrs}`)];
+    return [rawLang, parseCopyFlag(attrs)];
+}
+
+/** The `data-copy` attribute the HTML export's copy script reads, or '' for none. */
+export function copyFlagAttr(flag: CopyFlag): string {
+    return flag ? ` data-copy="${flag}"` : '';
+}
+
 /** Parses a `2,4-6` line-range spec into the set of 1-indexed line numbers it covers. */
 export function extractHighlightLines(rangeSpec: string): Set<number> {
     const lines = new Set<number>();

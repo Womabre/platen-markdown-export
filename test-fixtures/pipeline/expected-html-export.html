@@ -17,6 +17,7 @@
 <style>[304B]</style>
 <style>[449B]</style>
 <style>[3524B]</style>
+<style>[983B]</style>
 <style>[372B]</style>
 <style>[6293B]</style>
 </head>
@@ -225,5 +226,59 @@ Press <kbd>Ctrl</kbd> + <kbd>S</kbd> to save. A footnote lives here.<sup class="
   </div>
 </div>
 
+<script>
+(function () {
+  var DEFAULT_ON = true;
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+  }
+  function selectCode(code) {
+    var range = document.createRange();
+    range.selectNodeContents(code);
+    var sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+  }
+  function copy(text) {
+    if (navigator.clipboard && window.isSecureContext)
+      return navigator.clipboard.writeText(text).catch(function () { return fallbackCopy(text); });
+    return fallbackCopy(text);
+  }
+  document.querySelectorAll('pre > code').forEach(function (code) {
+    var pre  = code.parentElement;
+    var flag = pre.getAttribute('data-copy');
+    if (flag === 'off' || (flag !== 'on' && !DEFAULT_ON)) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-button';
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code to clipboard');
+    var timer;
+    btn.addEventListener('click', function () {
+      copy(code.textContent.replace(/\n$/, '')).then(function () {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+      }, function () {
+        // Clipboard refused (no permission, old browser): select the code so
+        // one keystroke finishes the job.
+        selectCode(code);
+        btn.textContent = /Mac|iP/.test(navigator.platform) ? 'Press ⌘C' : 'Press Ctrl+C';
+      }).then(function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      });
+    });
+    pre.classList.add('has-copy-button');
+    pre.appendChild(btn);
+  });
+})();
+</script>
 </body>
 </html>

@@ -244,6 +244,12 @@ export interface FrontmatterData {
     /** Number every line of every fenced code block. */
     codeLineNumbers: boolean;
     /**
+     * Give every code block a Copy button in the HTML export (on by default).
+     * Off leaves only blocks fenced with a `copy` flag; `nocopy` opts one out
+     * either way. The PDF never carries a button.
+     */
+    copyButtons: boolean;
+    /**
      * Convert `(c)`, `(r)`, `(tm)` to ©/®/™. Off by default — those sequences
      * read as literal parentheticals far more often than as intended trademark
      * marks, so a document has to opt in.

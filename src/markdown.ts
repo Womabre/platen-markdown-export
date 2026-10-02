@@ -31,6 +31,8 @@ import {
 } from './admonitions';
 import {
     splitLangSpec,
+    splitCopyFlagFromLang,
+    copyFlagAttr,
     extractHighlightLines,
     wrapCodeLines,
     registerLayoutContainers,
@@ -529,7 +531,11 @@ export async function convertMarkdownToHtml(
         html:        true,
         linkify:     true,
         typographer: true,
-                    highlight(code: string, rawLang: string): string {
+        highlight(code: string, fenceLang: string, fenceAttrs: string): string {
+            // `copy` / `nocopy` after the language overrides `Copy Buttons` for
+            // this block; it lands on the <pre> for the HTML export's script.
+            const [rawLang, copyFlag] = splitCopyFlagFromLang(fenceLang, fenceAttrs);
+
             // Mermaid diagrams are pre-rendered to SVG in a post-processing step.
             // Emit a placeholder here; the actual render happens in renderMermaidDiagrams().
             if (rawLang === 'mermaid') {
@@ -557,11 +563,11 @@ export async function convertMarkdownToHtml(
                         code,
                         { language: lang, ignoreIllegals: true },
                     ).value;
-                    return `<pre class="hljs"><code>${wrapCodeLines(highlighted, highlightLines)}</code></pre>`;
+                    return `<pre class="hljs"${copyFlagAttr(copyFlag)}><code>${wrapCodeLines(highlighted, highlightLines)}</code></pre>`;
                 } catch { /* fall through to default */ }
             }
             const escaped = md.utils.escapeHtml(code);
-            return `<pre class="hljs"><code>${wrapCodeLines(escaped, highlightLines)}</code></pre>`;
+            return `<pre class="hljs"${copyFlagAttr(copyFlag)}><code>${wrapCodeLines(escaped, highlightLines)}</code></pre>`;
         },
     })
         .use(compat(anchor), {
