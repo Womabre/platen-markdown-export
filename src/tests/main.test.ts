@@ -92,6 +92,23 @@ describe('main() — html export', () => {
         assert.match(html, /class="[^"]*html-export/, 'the html pipeline marks the body');
     });
 
+    it('labels captions and the List of Tables in the document language', async () => {
+        // `Lang` has to reach two stages that never see the frontmatter
+        // directly: the caption pass inside the shared render, and the index
+        // built at the end. Both were hardcoded English.
+        const doc = document({ extra: 'Lang: nl\nList of Tables: true' })
+            .replace('Body text for the export.', [
+                '## Inhoudsopgave', '', '- [Cijfers](#cijfers)', '',
+                '## Cijfers', '', '| a | b |', '|---|---|', '| 1 | 2 |', '', 'Table: Eerste tabel',
+            ].join('\n'));
+        await main({ argv: ['--quiet', '--no-bump', write('dutch', doc)] });
+
+        const html = read(path.join(dir, 'dutch_Rev3.html'));
+        assert.match(html, /<span class="caption-label">Tabel 1\.<\/span> Eerste tabel/);
+        assert.match(html, /<h2 class="caption-index-heading">Lijst van tabellen<\/h2>/);
+        assert.ok(!html.includes('List of Tables</h2>'));
+    });
+
     it('honours --output over the derived name', async () => {
         const file = write('named', document());
         const out  = path.join(dir, 'somewhere-else.html');

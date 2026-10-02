@@ -51,7 +51,15 @@ async function main(): Promise<void> {
             ],
         });
     } finally {
-        fs.rmSync(userDataDir, { recursive: true, force: true });
+        // VS Code can still be writing to the profile as the harness returns, and
+        // the delete then fails with ENOTEMPTY — failing a run whose tests all
+        // passed. Retry a few times, and treat a leftover temp profile as the
+        // harmless thing it is.
+        try {
+            fs.rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+        } catch {
+            console.log(`(left ${userDataDir} behind — VS Code was still writing to it)`);
+        }
     }
 }
 

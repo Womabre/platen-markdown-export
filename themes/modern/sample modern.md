@@ -237,10 +237,15 @@ Mode: pdf, html                # pdf | html | debug — comma-separated
 ## Typography {.page-break-before}
 
 # Heading 1
+
 ## Heading 2
+
 ### Heading 3
+
 #### Heading 4
+
 ##### Heading 5
+
 ###### Heading 6
 
 Normal paragraph text. **Bold text** stands out, while *italic text* adds emphasis. You can also combine them: ***bold and italic***.

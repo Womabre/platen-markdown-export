@@ -8,6 +8,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **An export no longer waits on a dependency question already on screen.** The
+  check and the question shared one promise, so an export started while the
+  question was up waited for it — and a notification with buttons waits for an
+  answer, so that could be forever. It showed up as a CI run whose extension-host
+  tests hung for six hours against the question activation raised on a runner
+  with none of the dependencies installed. A second caller now returns straight
+  away, and what has already been asked is remembered per missing set, so a set
+  that changes during a session is asked about again.
+- **A passing integration run is no longer failed by its own cleanup.** VS Code
+  can still be writing to the throwaway profile when the harness returns, and
+  deleting it then failed with ENOTEMPTY.
+- **The List of Tables and List of Figures show real page numbers.** Every entry
+  printed page 0: the index still laid its entries out with flex, and WeasyPrint
+  resolves `target-counter()` to 0 inside a flex item - the reason the TOC was
+  moved to `leader()` long ago. The indexes now use the TOC's layout in every
+  theme, and a per-theme test keeps it that way.
+- **Captions and caption indexes follow `Lang`.** `Lang: nl` now gives
+  `Tabel 1.`, `Figuur 1.`, `Lijst van tabellen` and `Lijst van figuren`
+  (also German, French and Spanish) instead of English. A regional tag such as
+  `nl-NL` counts as its language, for the glossary too.
+
 ## [1.0.4] - 2026-09-15
 
 ### Changed

@@ -1,6 +1,7 @@
 import type MarkdownIt from 'markdown-it';
 import container from 'markdown-it-container';
 import { log } from './logger';
+import { documentLabels } from './labels';
 
 // ── Frontmatter variables ─────────────────────────────────────────────────────
 
@@ -130,11 +131,15 @@ export function wrapCodeLines(html: string, highlightLines: Set<number>): string
  * exists as a real `<img>`; on raw markdown-it output each diagram is still an
  * unrendered code fence.
  *
+ * The label ("Table"/"Figure") follows the document's `Lang`; only the
+ * source syntax - `Table:` / `Figure:` - stays English.
+ *
  * Each caption gets a stable `id` (`table-1`, `figure-1`, …) so the optional
  * List of Tables / List of Figures indexes can link to it and resolve its page
  * number via `target-counter`.
  */
-export function applyCaptions(html: string): string {
+export function applyCaptions(html: string, lang = 'en'): string {
+    const labels = documentLabels(lang);
     let tableN  = 0;
     let figureN = 0;
 
@@ -143,7 +148,7 @@ export function applyCaptions(html: string): string {
         (_match, prefix: string, caption: string) => {
             tableN++;
             return `${prefix}<p class="caption caption-table" id="table-${tableN}">`
-                 + `<span class="caption-label">Table ${tableN}.</span> ${caption.trim()}</p>`;
+                 + `<span class="caption-label">${labels.table} ${tableN}.</span> ${caption.trim()}</p>`;
         },
     );
 
@@ -152,7 +157,7 @@ export function applyCaptions(html: string): string {
         (_match, prefix: string, caption: string) => {
             figureN++;
             return `${prefix}<p class="caption caption-figure" id="figure-${figureN}">`
-                 + `<span class="caption-label">Figure ${figureN}.</span> ${caption.trim()}</p>`;
+                 + `<span class="caption-label">${labels.figure} ${figureN}.</span> ${caption.trim()}</p>`;
         },
     );
 

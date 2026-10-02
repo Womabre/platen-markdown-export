@@ -12,7 +12,7 @@ import {
     buildCliArgs, hasConfiguredMode,
     DEFAULT_INFOGRAPHIC_ICONS, WEAVEFOX_WARNING,
     parseSetupStatus, dependenciesWithoutNode, joinNames, dependencyPromptMessage,
-    shouldAskAboutDependencies, nodeInstallFailure, installResultMessage, type Dependency,
+    shouldAskAboutDependencies, nodeInstallFailure, installResultMessage, missingKey, type Dependency,
 } from '../core';
 
 /**
@@ -757,5 +757,17 @@ describe('installResultMessage', () => {
 
     it('has something to say when the CLI could not report what it installed', () => {
         assert.equal(installResultMessage([], []), 'Platen Markdown Export: setup finished.');
+    });
+});
+
+describe('missingKey', () => {
+    const deps = (...ids: string[]): Dependency[] => ids.map(id => ({ id, name: id, installed: false }));
+
+    it('is the same key however the set is ordered', () => {
+        assert.equal(missingKey(deps('chromium', 'node')), missingKey(deps('node', 'chromium')));
+    });
+
+    it('differs once the set does, so a changed set is asked about again', () => {
+        assert.notEqual(missingKey(deps('chromium')), missingKey(deps('chromium', 'drawio')));
     });
 });

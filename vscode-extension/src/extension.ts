@@ -14,7 +14,7 @@ import {
     WIZARD_FEATURES, type WizardAnswers,
     DEFAULT_INFOGRAPHIC_ICONS, WEAVEFOX_WARNING,
     parseSetupStatus, dependenciesWithoutNode, joinNames, dependencyPromptMessage,
-    shouldAskAboutDependencies, nodeInstallFailure, installResultMessage, type Dependency,
+    shouldAskAboutDependencies, nodeInstallFailure, installResultMessage, missingKey, type Dependency,
 } from './core';
 import { loadPreviewKit, previewMarkdownItPlugin, type PreviewHost, type PreviewKit } from './preview';
 
@@ -564,11 +564,25 @@ async function runExport(
 
 const DECLINED_DEPENDENCIES_KEY = 'platenMarkdownExport.declinedDependencies';
 
-/** Set once the question has been shown: "Not now" means not again this session. */
-let askedThisSession = false;
+/**
+ * The missing sets already asked about this session, so "Not now" is not asked
+ * again — keyed by the set rather than a single flag, because what is missing
+ * can change within a session (an install that half worked, a playwright upgrade
+ * orphaning the browser), and that is worth asking about.
+ */
+const askedSets = new Set<string>();
 
-/** The check or install in progress, shared so activation and a save never ask at the same time. */
-let dependencyFlight: Promise<DependencyOutcome> | undefined;
+/**
+ * Whether a question or an install is already on screen.
+ *
+ * A second caller returns straight away instead of awaiting the first. Sharing
+ * the promise instead meant an export started while the question was still up
+ * waited on a notification nobody had clicked yet — indefinitely, since a
+ * notification with buttons waits for an answer. It showed up as a CI run whose
+ * extension-host tests hung for six hours against the question activation had
+ * raised on a runner with none of the dependencies installed.
+ */
+let dependencyWorkInFlight = false;
 
 interface DependencyOutcome {
     /** Whether the CLI can run now. */
@@ -596,9 +610,18 @@ function cliReady(cli: ResolvedCli): boolean {
  * declined everything that is missing. `ask: false` is the Install Dependencies
  * command and button: the user has already asked, so it installs straight away.
  */
-function offerDependencies(context: vscode.ExtensionContext, opts: { ask: boolean }): Promise<DependencyOutcome> {
-    dependencyFlight ??= resolveDependencies(context, opts).finally(() => { dependencyFlight = undefined; });
-    return dependencyFlight;
+async function offerDependencies(
+    context: vscode.ExtensionContext,
+    opts: { ask: boolean },
+): Promise<DependencyOutcome> {
+    // Answering the question already on screen is what matters. Waiting for it
+    // here would park this caller behind a notification nobody has clicked.
+    if (dependencyWorkInFlight) { return { ready: false, prompted: true }; }
+    try {
+        return await resolveDependencies(context, opts);
+    } finally {
+        dependencyWorkInFlight = false;
+    }
 }
 
 async function resolveDependencies(context: vscode.ExtensionContext, opts: { ask: boolean }): Promise<DependencyOutcome> {
@@ -620,11 +643,12 @@ async function resolveDependencies(context: vscode.ExtensionContext, opts: { ask
     const missing = dependencies.filter(d => !d.installed);
 
     if (opts.ask) {
-        if (!missing.length || askedThisSession) { return { ready: cliReady(cli), prompted: false }; }
+        if (!missing.length || askedSets.has(missingKey(missing))) { return { ready: cliReady(cli), prompted: false }; }
         const declined = context.globalState.get<string[]>(DECLINED_DEPENDENCIES_KEY, []);
         if (!shouldAskAboutDependencies(missing, declined)) { return { ready: cliReady(cli), prompted: false }; }
 
-        askedThisSession = true;
+        askedSets.add(missingKey(missing));
+        dependencyWorkInFlight = true;
         const choice = await vscode.window.showInformationMessage(
             dependencyPromptMessage(missing), 'Install', 'Not now', "Don't ask again");
         if (choice === "Don't ask again") {
@@ -639,6 +663,7 @@ async function resolveDependencies(context: vscode.ExtensionContext, opts: { ask
 
     // An empty list is a CLI that could not say what is missing — an older one.
     // Only the explicit command gets this far with it, and then `--setup` decides.
+    dependencyWorkInFlight = true;
     await installDependencies(cli, missing, dependencies.length === 0);
     return { ready: cliReady(cli), prompted: opts.ask };
 }

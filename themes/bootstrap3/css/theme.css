@@ -487,24 +487,28 @@ nav.caption-index .caption-index-heading { margin-bottom: 0.5em; }
 nav.caption-index ul { list-style: none; padding-left: 0; }
 nav.caption-index li { margin: 0.2em 0; }
 nav.caption-index a {
-  display: flex;
-  align-items: baseline;
+  display: block;
   text-decoration: none;
   color: inherit;
   font-size: 9pt;
 }
+/* Same split as nav.toc: WeasyPrint resolves target-counter() to 0 inside a
+   flex item, so the PDF gets block layout with leader(), and the HTML export
+   (which has no page numbers) keeps the flex leader below. */
 nav.caption-index a::after {
+  content: leader(dotted) target-counter(attr(href), page);
+  opacity: 0.7;
+}
+body.html-export nav.caption-index a {
+  display: flex;
+  align-items: baseline;
+}
+body.html-export nav.caption-index a::after {
   content: "";
   flex: 1;
   border-bottom: 1.5px dotted currentColor;
   margin: 0 0.5em 0.2em;
   opacity: 0.5;
-}
-nav.caption-index a::before {
-  content: target-counter(attr(href), page);
-  font-size: 9pt;
-  order: 3;
-  flex-shrink: 0;
 }
 
 /* ── Code line numbers (frontmatter: Code Line Numbers) ───────────────────────

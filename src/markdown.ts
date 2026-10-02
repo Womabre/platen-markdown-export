@@ -23,6 +23,7 @@ import { graphvizPlaceholder } from './graphviz';
 import { infographicPlaceholder } from './infographic';
 import { escHtml, extractFrontmatter, stampRevisionDate, resolveRevision, CONCURRENT_EXPORT_HINT } from './frontmatter';
 import type { FrontmatterData } from './types';
+import { documentLabels } from './labels';
 import {
     containerConfig,
     mkdocsAdmonitions,
@@ -528,7 +529,7 @@ export async function convertMarkdownToHtml(
         html:        true,
         linkify:     true,
         typographer: true,
-        highlight(code: string, rawLang: string): string {
+                    highlight(code: string, rawLang: string): string {
             // Mermaid diagrams are pre-rendered to SVG in a post-processing step.
             // Emit a placeholder here; the actual render happens in renderMermaidDiagrams().
             if (rawLang === 'mermaid') {
@@ -669,14 +670,6 @@ export function hideFrontmatterTable(html: string): string {
 
 // ── Abbreviation glossary ─────────────────────────────────────────────────────
 
-const GLOSSARY_LABELS: Record<string, { heading: string; col1: string; col2: string }> = {
-    nl: { heading: 'Afkortingen',   col1: 'Afkorting',    col2: 'Omschrijving' },
-    en: { heading: 'Abbreviations', col1: 'Abbreviation', col2: 'Description'  },
-    de: { heading: 'Abkürzungen',   col1: 'Abkürzung',    col2: 'Beschreibung' },
-    fr: { heading: 'Abréviations',  col1: 'Abréviation',  col2: 'Description'  },
-    es: { heading: 'Abreviaturas',  col1: 'Abreviatura',  col2: 'Descripción'  },
-};
-
 /**
  * Blanks the body of every fenced code block, keeping line numbering intact.
  *
@@ -730,7 +723,7 @@ export function buildGlossary(body: string, lang: string): string {
 
     if (entries.size === 0) return '';
 
-    const labels = GLOSSARY_LABELS[lang.toLowerCase()] ?? GLOSSARY_LABELS['en'];
+    const labels = documentLabels(lang);
 
     const rows = [...entries.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
@@ -742,9 +735,9 @@ export function buildGlossary(body: string, lang: string): string {
 
     return `
 <div class="glossary-section">
-  <h2>${labels.heading}</h2>
+  <h2>${labels.glossaryHeading}</h2>
   <table class="glossary-table">
-    <thead><tr><th>${labels.col1}</th><th>${labels.col2}</th></tr></thead>
+    <thead><tr><th>${labels.glossaryAbbr}</th><th>${labels.glossaryDef}</th></tr></thead>
     <tbody>
 ${rows}
     </tbody>

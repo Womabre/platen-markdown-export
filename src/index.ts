@@ -24,6 +24,7 @@ import { renderInfographicDiagrams, INFOGRAPHIC_CSS, hasInfographicPlaceholders 
 import type { InfographicIconProvider } from './config';
 import { renderDrawioDiagrams } from './drawio';
 import { applyCaptions, markDenseTables } from './markdown-extras';
+import { documentLabels }           from './labels';
 import { startServer, exportPdf, colorEmojiRenderingSupported } from './weasyprint';
 import { startWatch }             from './watch';
 import { spawn } from 'child_process';
@@ -69,6 +70,8 @@ export interface DiagramOptions {
     stripDiagramEmoji?: boolean;
     /** Where ```infographic icons come from. Default: CONFIG.infographicIcons. */
     infographicIcons?: InfographicIconProvider;
+    /** Document language (`Lang`), for the caption labels. Default: English. */
+    lang?: string;
 }
 
 /**
@@ -101,7 +104,7 @@ export async function renderDiagramsAndImages(
     // Table/Figure captions run here, not inside markdown.ts's render step: a
     // Mermaid diagram is still an unrendered code fence at that point, not yet
     // the <img> its "Figure: ..." caption needs to attach to.
-    htmlContent = applyCaptions(htmlContent);
+    htmlContent = applyCaptions(htmlContent, opts.lang);
     htmlContent = markDenseTables(htmlContent);
 
     // Replace emoji with Twemoji <img>s before inlining so they're embedded as
@@ -143,8 +146,10 @@ function applyInlineColorPasses(htmlContent: string): string {
  */
 function finishDocument(
     htmlContent: string,
-    fm: Pick<FrontmatterData, 'tocDepth' | 'listOfTables' | 'listOfFigures'>,
+    fm: Pick<FrontmatterData, 'tocDepth' | 'listOfTables' | 'listOfFigures' | 'lang'>,
 ): string {
+    const labels = documentLabels(fm.lang);
+
     log('Injecting TOC wrapper...');
     htmlContent = injectTocWrapper(htmlContent);
 
@@ -152,8 +157,8 @@ function finishDocument(
     htmlContent = rebuildToc(htmlContent, fm.tocDepth);
 
     return injectCaptionIndexes(htmlContent, [
-        fm.listOfTables  ? buildCaptionIndex(htmlContent, 'table',  'List of Tables')  : '',
-        fm.listOfFigures ? buildCaptionIndex(htmlContent, 'figure', 'List of Figures') : '',
+        fm.listOfTables  ? buildCaptionIndex(htmlContent, 'table',  labels.listOfTables)  : '',
+        fm.listOfFigures ? buildCaptionIndex(htmlContent, 'figure', labels.listOfFigures) : '',
     ]);
 }
 
@@ -892,7 +897,7 @@ export async function executeExport(o: ExecuteOptions): Promise<ExportResult> {
         htmlFile,
         { pageSize: fm.pageSize, margins: fm.margins, orientation: fm.orientation },
         dependencies,
-        { stripDiagramEmoji, infographicIcons: plan.infographicIcons },
+        { stripDiagramEmoji, infographicIcons: plan.infographicIcons, lang: fm.lang },
     );
 
     // What this run wrote back to the source document, if anything — the

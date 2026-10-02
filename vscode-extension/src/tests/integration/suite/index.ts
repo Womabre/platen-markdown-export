@@ -675,6 +675,41 @@ describe('runtime dependencies', () => {
         assert.deepEqual(exportsOf('deps-ask'), [], 'nothing can be exported without Node.js');
     });
 
+    it('does not park an export behind a question already on screen', async () => {
+        // A question waits for an answer, so a second caller must not wait for
+        // it. Sharing that wait hung a CI run for six hours, against the question
+        // activation raised on a runner with none of the dependencies installed.
+        // The fake CLI sits in a folder with no bootstrap.js, so this is a
+        // different missing set from the test above and is asked about again.
+        const cli = fakeCli('deps-inflight');
+        const files = ['inflight-a', 'inflight-b'].map((name) => {
+            const file = path.join(workDir, `${name}.md`);
+            fs.writeFileSync(file, '---\nTitle: Deps\nMode: html\n---\n\n# Deps\n');
+            return vscode.Uri.file(file);
+        });
+
+        const asked: string[] = [];
+        let answer: () => void = () => { /* replaced below */ };
+        const unanswered = new Promise<undefined>((resolve) => { answer = () => resolve(undefined); });
+        stub('showInformationMessage', ((message: string) => { asked.push(message); return unanswered; }) as never);
+        stub('showErrorMessage', (async () => undefined) as never);
+
+        await withSettings({ cliPath: cli.cliPath, nodePath: path.join(workDir, 'no-such-node') }, async () => {
+            const asking = vscode.commands.executeCommand('platenMarkdownExport.exportHtml', files[0]);
+            await settle(() => asked.length === 1, 10_000);
+            assert.equal(asked.length, 1, 'the first export must raise the question');
+
+            await Promise.race([
+                vscode.commands.executeCommand('platenMarkdownExport.exportHtml', files[1]),
+                pause(8000).then(() => { throw new Error('the second export waited for the unanswered question'); }),
+            ]);
+            assert.equal(asked.length, 1, 'and it must not raise a second question');
+
+            answer();
+            await asking;
+        });
+    });
+
     it('does not ask twice in a session; a manual export then says why, once', async () => {
         const file = path.join(workDir, 'deps-again.md');
         fs.writeFileSync(file, '---\nTitle: Deps\nMode: html\n---\n\n# Deps\n');

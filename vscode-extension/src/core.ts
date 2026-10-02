@@ -622,3 +622,14 @@ export function installResultMessage(installed: readonly string[], failed: reado
     const also = installed.length ? ` ${joinNames(installed)} ${installed.length === 1 ? 'was' : 'were'} installed.` : '';
     return `Platen Markdown Export could not install ${joinNames(failed)}.${also} The output has the details.`;
 }
+
+/**
+ * A stable key for one set of missing dependencies.
+ *
+ * What the extension remembers having asked about, so a set that CHANGES during
+ * a session — an install that only half worked, a playwright upgrade that
+ * orphans the browser — is asked about again, while the same set is not.
+ */
+export function missingKey(missing: readonly Dependency[]): string {
+    return missing.map(d => d.id).sort().join(',');
+}
