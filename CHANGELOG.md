@@ -8,6 +8,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Install Dependencies works while an earlier question is still pending.**
+  The dependency question hides in the notification centre after a few seconds
+  and stays unanswered until dismissed. In 1.1.0 an ignored question made the
+  **Install Dependencies** command do nothing, silently, for the rest of the
+  session, and an export that found Node.js missing said nothing either. Only
+  a running install now holds other callers back. A question already on screen
+  is not repeated, and a question about something new is still asked.
+
 ## [1.1.0] - 2026-10-02
 
 ### Added

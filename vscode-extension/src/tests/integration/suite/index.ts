@@ -710,6 +710,51 @@ describe('runtime dependencies', () => {
         });
     });
 
+    it('lets Install Dependencies run while an unanswered question waits in the notification centre', async () => {
+        // A question with buttons hides itself after a few seconds and stays
+        // pending until dismissed. One in-flight flag for "question or install"
+        // made the explicit command a silent no-op behind it for the rest of the
+        // session — on CI, behind the question activation raised on a runner
+        // with nothing installed. A bootstrap.js that finds WeasyPrint makes this
+        // missing set differ from the tests above, so it is asked about.
+        const cli = fakeCli('deps-behind-question');
+        fs.writeFileSync(path.join(path.dirname(cli.cliPath), 'bootstrap.js'),
+            "exports.findWeasyprint = () => '/usr/bin/weasyprint';\n");
+        const file = path.join(workDir, 'behind-question.md');
+        fs.writeFileSync(file, '---\nTitle: Deps\nMode: html\n---\n\n# Deps\n');
+
+        const asked: string[] = [];
+        const infos: string[] = [];
+        let answer: () => void = () => { /* replaced below */ };
+        const unanswered = new Promise<undefined>((resolve) => { answer = () => resolve(undefined); });
+        stub('showInformationMessage', ((message: string) => {
+            if (/Install them now\?$/.test(message)) { asked.push(message); return unanswered; }
+            infos.push(message);
+            return Promise.resolve(undefined);
+        }) as never);
+        stub('showErrorMessage', (async () => undefined) as never);
+
+        const cfg = vscode.workspace.getConfiguration('platenMarkdownExport');
+        await withSettings({ cliPath: cli.cliPath, nodePath: path.join(workDir, 'no-such-node') }, async () => {
+            const asking = vscode.commands.executeCommand('platenMarkdownExport.exportHtml', vscode.Uri.file(file));
+            await settle(() => asked.length === 1, 10_000);
+            assert.equal(asked.length, 1, 'the export must raise the question');
+
+            // Node.js back, the question still unanswered: the command must act.
+            await cfg.update('nodePath', undefined, vscode.ConfigurationTarget.Global);
+            await Promise.race([
+                vscode.commands.executeCommand('platenMarkdownExport.setup'),
+                pause(8000).then(() => { throw new Error('Install Dependencies waited for the unanswered question'); }),
+            ]);
+            assert.deepEqual(cli.setupCalls(), ['--check-setup --json', '--setup', '--check-setup --json']);
+            assert.deepEqual(infos, ['Platen Markdown Export: installed Chromium and draw.io.']);
+
+            answer();   // "dismissed" — nothing more may happen
+            await asking;
+            assert.equal(cli.setupCalls().length, 3, 'a dismissed question must not install');
+        });
+    });
+
     it('does not ask twice in a session; a manual export then says why, once', async () => {
         const file = path.join(workDir, 'deps-again.md');
         fs.writeFileSync(file, '---\nTitle: Deps\nMode: html\n---\n\n# Deps\n');

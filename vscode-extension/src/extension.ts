@@ -573,16 +573,28 @@ const DECLINED_DEPENDENCIES_KEY = 'platenMarkdownExport.declinedDependencies';
 const askedSets = new Set<string>();
 
 /**
- * Whether a question or an install is already on screen.
+ * The missing sets whose question is on screen right now, unanswered.
  *
- * A second caller returns straight away instead of awaiting the first. Sharing
- * the promise instead meant an export started while the question was still up
- * waited on a notification nobody had clicked yet — indefinitely, since a
- * notification with buttons waits for an answer. It showed up as a CI run whose
- * extension-host tests hung for six hours against the question activation had
- * raised on a runner with none of the dependencies installed.
+ * A caller never awaits someone else's question. Sharing that promise meant an
+ * export started while the question was up waited on a notification nobody had
+ * clicked yet — indefinitely, since a notification with buttons waits for an
+ * answer. It showed up as a CI run whose extension-host tests hung for six hours
+ * against the question activation had raised on a runner with none of the
+ * dependencies installed.
+ *
+ * Tracked per set rather than as one flag, because one flag blocked too much:
+ * a question hides itself in the notification centre after a few seconds and
+ * stays pending until dismissed, so an ignored activation question left the
+ * Install Dependencies command, and an export that found Node.js missing, doing
+ * nothing — silently — for the rest of the session.
  */
-let dependencyWorkInFlight = false;
+const questionsOnScreen = new Set<string>();
+
+/** Whether an install is running; a second one would race it. */
+let installInFlight = false;
+
+/** Installs finished this session, so a stale question's "Install" does not repeat one. */
+let installsCompleted = 0;
 
 interface DependencyOutcome {
     /** Whether the CLI can run now. */
@@ -614,14 +626,9 @@ async function offerDependencies(
     context: vscode.ExtensionContext,
     opts: { ask: boolean },
 ): Promise<DependencyOutcome> {
-    // Answering the question already on screen is what matters. Waiting for it
-    // here would park this caller behind a notification nobody has clicked.
-    if (dependencyWorkInFlight) { return { ready: false, prompted: true }; }
-    try {
-        return await resolveDependencies(context, opts);
-    } finally {
-        dependencyWorkInFlight = false;
-    }
+    // An install already has a progress notification up; a second would race it.
+    if (installInFlight) { return { ready: false, prompted: true }; }
+    return resolveDependencies(context, opts);
 }
 
 async function resolveDependencies(context: vscode.ExtensionContext, opts: { ask: boolean }): Promise<DependencyOutcome> {
@@ -643,19 +650,32 @@ async function resolveDependencies(context: vscode.ExtensionContext, opts: { ask
     const missing = dependencies.filter(d => !d.installed);
 
     if (opts.ask) {
-        if (!missing.length || askedSets.has(missingKey(missing))) { return { ready: cliReady(cli), prompted: false }; }
+        const key = missingKey(missing);
+        // This very question is on screen: it already says what this caller
+        // would, so say nothing more — and do not wait for its answer.
+        if (missing.length && questionsOnScreen.has(key)) { return { ready: false, prompted: true }; }
+        if (!missing.length || askedSets.has(key)) { return { ready: cliReady(cli), prompted: false }; }
         const declined = context.globalState.get<string[]>(DECLINED_DEPENDENCIES_KEY, []);
         if (!shouldAskAboutDependencies(missing, declined)) { return { ready: cliReady(cli), prompted: false }; }
 
-        askedSets.add(missingKey(missing));
-        dependencyWorkInFlight = true;
-        const choice = await vscode.window.showInformationMessage(
-            dependencyPromptMessage(missing), 'Install', 'Not now', "Don't ask again");
+        askedSets.add(key);
+        questionsOnScreen.add(key);
+        const installsBefore = installsCompleted;
+        let choice: string | undefined;
+        try {
+            choice = await vscode.window.showInformationMessage(
+                dependencyPromptMessage(missing), 'Install', 'Not now', "Don't ask again");
+        } finally {
+            questionsOnScreen.delete(key);
+        }
         if (choice === "Don't ask again") {
             await context.globalState.update(DECLINED_DEPENDENCIES_KEY,
                 [...new Set([...declined, ...missing.map(d => d.id)])]);
         }
         if (choice !== 'Install') { return { ready: cliReady(cli), prompted: true }; }
+        // Answered late, after Install Dependencies already ran (or is running):
+        // that install acted on a fresher check than this question did.
+        if (installInFlight || installsCompleted !== installsBefore) { return { ready: cliReady(cli), prompted: true }; }
     } else if (dependencies.length && !missing.length) {
         vscode.window.showInformationMessage('Platen Markdown Export: everything it needs is already installed.');
         return { ready: true, prompted: false };
@@ -663,8 +683,13 @@ async function resolveDependencies(context: vscode.ExtensionContext, opts: { ask
 
     // An empty list is a CLI that could not say what is missing — an older one.
     // Only the explicit command gets this far with it, and then `--setup` decides.
-    dependencyWorkInFlight = true;
-    await installDependencies(cli, missing, dependencies.length === 0);
+    installInFlight = true;
+    try {
+        await installDependencies(cli, missing, dependencies.length === 0);
+    } finally {
+        installInFlight = false;
+        installsCompleted++;
+    }
     return { ready: cliReady(cli), prompted: opts.ask };
 }
 
@@ -731,7 +756,7 @@ async function installDependencies(cli: ResolvedCli, missing: readonly Dependenc
         },
     );
 
-    // Not awaited: the result is information, and holding the flight open until
+    // Not awaited: the result is information, and holding the install open until
     // someone dismisses it would stall an export waiting on this install.
     if (nodeFailed) {
         const { message, command } = nodeInstallFailure(process.platform);
