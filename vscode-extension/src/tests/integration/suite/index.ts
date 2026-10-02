@@ -679,9 +679,14 @@ describe('runtime dependencies', () => {
         // A question waits for an answer, so a second caller must not wait for
         // it. Sharing that wait hung a CI run for six hours, against the question
         // activation raised on a runner with none of the dependencies installed.
-        // The fake CLI sits in a folder with no bootstrap.js, so this is a
-        // different missing set from the test above and is asked about again.
+        // It has to be a missing set no earlier test asked about, on any machine.
+        // A fake-CLI folder with no bootstrap.js or drawio.js finds neither
+        // WeasyPrint nor draw.io — exactly what the real CLI finds on a runner
+        // with nothing installed, so there it matched the test above and was
+        // never asked. A drawio.js that finds draw.io makes the set unique.
         const cli = fakeCli('deps-inflight');
+        fs.writeFileSync(path.join(path.dirname(cli.cliPath), 'drawio.js'),
+            "exports.findDrawioCli = () => '/usr/bin/drawio';\n");
         const files = ['inflight-a', 'inflight-b'].map((name) => {
             const file = path.join(workDir, `${name}.md`);
             fs.writeFileSync(file, '---\nTitle: Deps\nMode: html\n---\n\n# Deps\n');
