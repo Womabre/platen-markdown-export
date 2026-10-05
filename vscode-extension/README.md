@@ -34,22 +34,22 @@ for, so the result message offers the install command to copy instead.
   document (frontmatter with `Mode`, `Theme` or `Style`) in its theme and style,
   from the export's own CSS. Nothing to set up; other Markdown files are left
   alone. For Markdown Preview Enhanced, run
-  `Markdown Export: Theme Markdown Preview Enhanced in This Workspace` once. See
+  `Platen Markdown Export: Theme Markdown Preview Enhanced in This Workspace` once. See
   *Live preview in your theme* in the main README for what a preview can and
   cannot show.
 - **Context menu** on `.md`/`.html` files (editor right-click and Explorer right-click).
-- **Commands** (Command Palette → "Markdown Export"):
-  - `Markdown Export: Export` — uses your configured mode / the document's `Mode` frontmatter.
-  - `Markdown Export: Export as PDF`
-  - `Markdown Export: Export as HTML`
-  - `Markdown Export: Export as PDF + HTML`
-  - `Markdown Export: Export and cut a release` — the only thing that bumps the
+- **Commands** (Command Palette → "Platen Markdown Export"):
+  - `Platen Markdown Export: Export` — uses your configured mode / the document's `Mode` frontmatter.
+  - `Platen Markdown Export: Export as PDF`
+  - `Platen Markdown Export: Export as HTML`
+  - `Platen Markdown Export: Export as PDF + HTML`
+  - `Platen Markdown Export: Export and cut a release` — the only thing that bumps the
     revision and resets `Status`. Nothing automatic does.
-  - `Markdown Export: Install runtime dependencies` — installs whatever is missing (Node.js, WeasyPrint,
+  - `Platen Markdown Export: Install runtime dependencies` — installs whatever is missing (Node.js, WeasyPrint,
     Chromium, draw.io) straight away, without asking first.
-  - `Markdown Export: Refresh Preview Themes` — rebuilds the preview stylesheets
+  - `Platen Markdown Export: Refresh Preview Themes` — rebuilds the preview stylesheets
     after you edit a theme's CSS (theme-folder changes rebuild them on their own).
-  - `Markdown Export: Theme Markdown Preview Enhanced in This Workspace` — writes
+  - `Platen Markdown Export: Theme Markdown Preview Enhanced in This Workspace` — writes
     `.crossnote/parser.js`; refuses to replace one that has hooks of your own.
 - Streams CLI output to the **Platen Markdown Export** output channel. A manual
   export shows a cancellable progress notification; a save-triggered one reports
@@ -124,7 +124,7 @@ it stays off until you trust the folder.
 ## Exporting vs releasing
 
 Cutting a release — appending a `Revisions` row, bumping every `Revision` field,
-resetting `Status` — is its own command: **Markdown Export: Export and cut a
+resetting `Status` — is its own command: **Platen Markdown Export: Export and cut a
 release**. No other path does it, so nothing that happens on save, or in CI, or
 when a colleague re-exports your document to read it, can rewrite its revision
 history. The revision *date* is still stamped by every export, so the output

@@ -2,7 +2,7 @@
   "name": "platen-markdown-export-vscode",
   "displayName": "Platen Markdown Export",
   "description": "Export Markdown (or HTML) to print-quality PDF / standalone HTML via the platen-markdown-export CLI.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "license": "MIT",
   "private": true,
   "publisher": "Womabre",
@@ -37,79 +37,79 @@
     "commands": [
       {
         "command": "platenMarkdownExport.export",
-        "title": "Markdown Export: Export (Markdown \u2192 PDF/HTML)",
+        "title": "Export (Markdown \u2192 PDF/HTML)",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.exportPdf",
-        "title": "Markdown Export: Export as PDF",
+        "title": "Export as PDF",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.exportHtml",
-        "title": "Markdown Export: Export as HTML",
+        "title": "Export as HTML",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.exportBoth",
-        "title": "Markdown Export: Export as PDF + HTML",
+        "title": "Export as PDF + HTML",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.release",
-        "title": "Markdown Export: Export and cut a release",
+        "title": "Export and cut a release",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.frontmatterWizard",
-        "title": "Markdown Export: Frontmatter Wizard (fill in this document)\u2026",
+        "title": "Frontmatter Wizard (fill in this document)\u2026",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.insertFrontmatter",
-        "title": "Markdown Export: Insert Frontmatter Template (static)",
+        "title": "Insert Frontmatter Template (static)",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.newDocument",
-        "title": "Markdown Export: New Document with Frontmatter Wizard\u2026",
+        "title": "New Document with Frontmatter Wizard\u2026",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.selectTheme",
-        "title": "Markdown Export: Select Theme\u2026",
+        "title": "Select Theme\u2026",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.addThemeFolder",
-        "title": "Markdown Export: Add External Theme Folder\u2026",
+        "title": "Add External Theme Folder\u2026",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.setup",
-        "title": "Markdown Export: Install runtime dependencies (WeasyPrint, Chromium)",
+        "title": "Install runtime dependencies (WeasyPrint, Chromium)",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.showOutput",
-        "title": "Markdown Export: Show output log",
+        "title": "Show output log",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.refreshPreviewThemes",
-        "title": "Markdown Export: Refresh Preview Themes",
+        "title": "Refresh Preview Themes",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.setupMpePreview",
-        "title": "Markdown Export: Theme Markdown Preview Enhanced in This Workspace",
+        "title": "Theme Markdown Preview Enhanced in This Workspace",
         "category": "Platen Markdown Export"
       }
     ],
     "submenus": [
       {
         "id": "platenMarkdownExport.contextMenu",
-        "label": "Markdown Export"
+        "label": "Platen Markdown Export"
       }
     ],
     "menus": {
@@ -229,12 +229,12 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Extra folders searched for themes, each holding one directory per theme (every one with a `theme.json`) - the same shape as the tool's own `themes/`.\n\nUse **Markdown Export: Add External Theme Folder...** rather than editing this by hand: it checks the folder actually contains themes before saving it, so a mistyped path fails while the folder picker is still on screen instead of later as \"Theme not found\".\n\nMaps to `--theme-path`, which the CLI also reads from `EXPORT_THEME_PATH` - so the terminal and this extension see the same list. An external theme shadows a built-in one of the same name."
+          "markdownDescription": "Extra folders searched for themes, each holding one directory per theme (every one with a `theme.json`) - the same shape as the tool's own `themes/`.\n\nUse **Platen Markdown Export: Add External Theme Folder...** rather than editing this by hand: it checks the folder actually contains themes before saving it, so a mistyped path fails while the folder picker is still on screen instead of later as \"Theme not found\".\n\nMaps to `--theme-path`, which the CLI also reads from `EXPORT_THEME_PATH` - so the terminal and this extension see the same list. An external theme shadows a built-in one of the same name."
         },
         "platenMarkdownExport.preview.enabled": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Show export documents in VS Code's built-in Markdown preview in their theme and style - the export's own CSS, chosen the way an export chooses it (`theme` setting, then the `Theme` frontmatter, then `EXPORT_THEME`, then `default`).\n\nOnly documents whose frontmatter declares `Mode`, `Theme` or `Style` are themed; every other Markdown file keeps the preview's normal look. It themes the text only: pages, the cover, running headers and rendered diagrams appear in the export alone.\n\nThe stylesheets are rebuilt when the extension starts and when theme folders change. After editing a theme's CSS, run **Markdown Export: Refresh Preview Themes**."
+          "markdownDescription": "Show export documents in VS Code's built-in Markdown preview in their theme and style - the export's own CSS, chosen the way an export chooses it (`theme` setting, then the `Theme` frontmatter, then `EXPORT_THEME`, then `default`).\n\nOnly documents whose frontmatter declares `Mode`, `Theme` or `Style` are themed; every other Markdown file keeps the preview's normal look. It themes the text only: pages, the cover, running headers and rendered diagrams appear in the export alone.\n\nThe stylesheets are rebuilt when the extension starts and when theme folders change. After editing a theme's CSS, run **Platen Markdown Export: Refresh Preview Themes**."
         },
         "platenMarkdownExport.defaultAuthor": {
           "type": "string",

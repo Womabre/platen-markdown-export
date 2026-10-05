@@ -240,7 +240,7 @@ platen-markdown-export --preview-kit .crossnote --preview-format mpe           #
 **VS Code's built-in preview** needs nothing: the extension builds a kit in its
 own storage when it starts (and again when theme folders change) and themes the
 preview through a markdown-it plugin. **Markdown Preview Enhanced** runs
-**Markdown Export: Theme Markdown Preview Enhanced in This Workspace** once, which
+**Platen Markdown Export: Theme Markdown Preview Enhanced in This Workspace** once, which
 writes `.crossnote/parser.js`. MPE evaluates that file in a sandbox with no file
 access and ignores `@import "x.css"` unless script execution is on, so the
 stylesheets travel inside the parser. Set MPE's `previewTheme` to `none.css` (the
@@ -272,7 +272,7 @@ styles, Markdown All in One, MkDocs Material…) keep working on every other
 Markdown file, but inside a themed document their styling is reset so the theme's
 wins; diagrams (SVG) and KaTeX maths are left untouched. A table or a display
 formula wider than the preview pane scrolls sideways inside its own box, so a
-narrow side-by-side preview never scrolls the whole page. After editing a theme's CSS, run **Markdown Export:
+narrow side-by-side preview never scrolls the whole page. After editing a theme's CSS, run **Platen Markdown Export:
 Refresh Preview Themes** (or re-run `--preview-kit`).
 
 ## Revision workflow
@@ -324,13 +324,13 @@ One thing worth knowing, because it looks exactly like the feature breaking: **t
 
 The VS Code extension's export-on-save only fires for documents that declare a `Mode:` frontmatter key (or when a mode is forced in its settings), so saving a README or a scratch note starts nothing. A document that should be exported by hand but not on every save can opt out on its own with `Export On Save: false` — the CLI ignores that key, since "on save" is not a concept it has.
 
-Releasing has its own command there, **Markdown Export: Export and cut a release**, on the editor and explorer context menus for any Markdown file; no save-triggered export can cut one. It asks the CLI (`--inspect`) whether the revision being released already carries a `Remarks` note and prompts for one only when it does not — the note lands on that outgoing revision, which is the row the cover's revision table shows. Escape abandons the release; an empty box releases without a note, which is what happened before the prompt existed.
+Releasing has its own command there, **Platen Markdown Export: Export and cut a release**, on the editor and explorer context menus for any Markdown file; no save-triggered export can cut one. It asks the CLI (`--inspect`) whether the revision being released already carries a `Remarks` note and prompts for one only when it does not — the note lands on that outgoing revision, which is the row the cover's revision table shows. Escape abandons the release; an empty box releases without a note, which is what happened before the prompt existed.
 
-Right-clicking gives you a **Markdown Export** submenu in both places: inside a Markdown document it sits next to Format Document, and in the Explorer next to Open. It holds the three frontmatter commands, then the four export modes and the release. Right-clicking a *folder* offers just the new-document wizard, since the rest need a document.
+Right-clicking gives you a **Platen Markdown Export** submenu in both places: inside a Markdown document it sits next to Format Document, and in the Explorer next to Open. It holds the three frontmatter commands, then the four export modes and the release. Right-clicking a *folder* offers just the new-document wizard, since the rest need a document.
 
-Frontmatter has two commands beside the wizard's: **Markdown Export: Frontmatter Wizard (fill in this document)…** asks the wizard's questions and inserts the block at the top of the file you already have open (refusing one that already has a block), while **Insert Frontmatter Template (static)** drops the placeholder scaffold with no questions at all — instant, and works even when the CLI cannot be resolved.
+Frontmatter has two commands beside the wizard's: **Platen Markdown Export: Frontmatter Wizard (fill in this document)…** asks the wizard's questions and inserts the block at the top of the file you already have open (refusing one that already has a block), while **Insert Frontmatter Template (static)** drops the placeholder scaffold with no questions at all — instant, and works even when the CLI cannot be resolved.
 
-Two more commands round out the editor side. **Markdown Export: New Document (wizard)…** walks through title, author, theme, cover style, export mode and the optional document controls, then writes the file — the frontmatter itself comes from the CLI's own `--init --answers`, so there is one implementation of the scaffold and it is the one the exporter parses. **Markdown Export: Add External Theme Folder…** registers a folder of themes (see [External themes](#external-themes)) after checking it actually contains some, and **Markdown Export: Select Theme…** picks from every theme the CLI can see, built-in and external.
+Two more commands round out the editor side. **Platen Markdown Export: New Document (wizard)…** walks through title, author, theme, cover style, export mode and the optional document controls, then writes the file — the frontmatter itself comes from the CLI's own `--init --answers`, so there is one implementation of the scaffold and it is the one the exporter parses. **Platen Markdown Export: Add External Theme Folder…** registers a folder of themes (see [External themes](#external-themes)) after checking it actually contains some, and **Platen Markdown Export: Select Theme…** picks from every theme the CLI can see, built-in and external.
 
 ## Markdown features
 

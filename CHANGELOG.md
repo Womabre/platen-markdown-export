@@ -8,6 +8,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-05
+
+### Changed
+
+- **The right-click submenu is now called Platen Markdown Export.** It was
+  "Markdown Export", which did not match the extension's name. The commands
+  inside it lose their repeated "Markdown Export:" prefix, since the submenu
+  already names them. In the Command Palette they appear as
+  "Platen Markdown Export: Export as PDF" and so on.
+
 ### Fixed
 
 - **The blank line after the frontmatter survives a date stamp or release.**
@@ -1229,7 +1239,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First tagged release.
 
-[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.1.2
 [1.1.1]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.1.1
 [1.1.0]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.1.0
 [1.0.4]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.0.4
