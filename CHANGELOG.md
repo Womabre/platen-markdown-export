@@ -8,6 +8,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The blank line after the frontmatter survives a date stamp or release.**
+  Each time an export stamped the revision date or `--release` bumped the
+  revision, the empty line between the closing `---` and the first heading was
+  deleted from your document. The YAML parser we use counts blank lines after
+  the closing delimiter as part of the frontmatter, and the rewrite rebuilt the
+  file from what was left. Everything after the closing `---` is now written
+  back exactly as it was. Documents that already lost the line need it added
+  back by hand once.
+
 ## [1.1.1] - 2026-10-02
 
 ### Fixed

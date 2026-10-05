@@ -809,3 +809,54 @@ describe('frontmatterTemplate --answers', () => {
         }
     });
 });
+
+describe('rewriting the frontmatter leaves the body byte for byte', () => {
+    // The bug this locks down: the front-matter library matches the closing
+    // delimiter with `\s*$` under the `m` flag, so its `body` starts after
+    // every blank line that follows `---`. Both rewrites rebuilt the file from
+    // that body, and each date stamp or release bump deleted the blank line
+    // between the frontmatter and the first heading.
+    const TODAY = new Date('2026-09-02T12:00:00Z');
+    const doc = (status: string, gap: string, eol = '\n') => [
+        '---',
+        'Title: T',
+        `Status: ${status}`,
+        'Revisions:',
+        '  - Revision: 1',
+        '    Date: "2020-01-01"',
+        '    Author: W',
+        '---',
+    ].join(eol) + eol + gap + '# T' + eol + eol + 'Text.' + eol;
+
+    const bodyOf = (content: string, eol = '\n') =>
+        content.slice(content.indexOf(`${eol}---${eol}`) + `${eol}---${eol}`.length);
+
+    for (const [label, gap] of [['one blank line', '\n'], ['two blank lines', '\n\n'], ['none', '']]) {
+        it(`keeps ${label} after a date stamp`, () => {
+            const out = stampRevisionDate(doc('Work In Progress', gap), TODAY);
+            assert.match(out, /2026-09-02/, 'the stamp happened');
+            assert.equal(bodyOf(out), `${gap}# T\n\nText.\n`);
+        });
+    }
+
+    it('keeps the blank line after a release bump', () => {
+        const dir  = fs.mkdtempSync(path.join(os.tmpdir(), 'pme-gap-'));
+        const file = path.join(dir, 'doc.md');
+        fs.writeFileSync(file, doc('Released', '\n'));
+        try {
+            bumpRevisionAfterExport(file, extractFrontmatter(file));
+            const out = fs.readFileSync(file, 'utf8');
+            assert.match(out, /Revision: 2/, 'the bump happened');
+            assert.equal(bodyOf(out), '\n# T\n\nText.\n');
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    it('keeps a CRLF blank line too', () => {
+        const out = stampRevisionDate(doc('Work In Progress', '\r\n', '\r\n'), TODAY);
+        assert.match(out, /2026-09-02/);
+        assert.ok(out.endsWith('---\n\r\n# T\r\n\r\nText.\r\n') || out.endsWith('---\r\n\r\n# T\r\n\r\nText.\r\n'),
+            JSON.stringify(out.slice(-40)));
+    });
+});

@@ -644,6 +644,26 @@ function updateLastRevisionDate(lines: string[], date: string): void {
 }
 
 /**
+ * The document after its closing frontmatter delimiter, byte for byte.
+ *
+ * Not `frontMatter(content).body` on its own: the library matches the closing
+ * delimiter with `\s*$` under the `m` flag, and `\s` spans newlines, so the
+ * blank line between `---` and the first heading is swallowed into the match
+ * and dropped from `body`. Rebuilding the file from that body deleted the
+ * blank line on every date stamp and every revision bump. The swallowed text
+ * is recovered from the original: everything after the closing delimiter's
+ * own line break belongs to the body.
+ */
+function verbatimBody(content: string, body: string): string {
+    if (!content.endsWith(body)) return body;
+    const header = content.slice(0, content.length - body.length);
+    const delimiter = /(?:^|\n)(?:---|\.\.\.|= yaml =)[^\S\r\n]*(?:\r?\n|$)/g;
+    let end = header.length;
+    for (let m = delimiter.exec(header); m; m = delimiter.exec(header)) end = m.index + m[0].length;
+    return header.slice(end) + body;
+}
+
+/**
  * Stamps today's date on the last `Revisions` entry, returning the new content.
  *
  * Pure: it takes and returns a string rather than reading and writing the file.
@@ -673,7 +693,7 @@ export function stampRevisionDate(content: string, today: Date = new Date()): st
     const newYaml = lines.join('\n');
     if (newYaml === parsed.frontmatter) return content;
 
-    return `---\n${newYaml}\n---\n${parsed.body}`;
+    return `---\n${newYaml}\n---\n${verbatimBody(content, parsed.body)}`;
 }
 
 // ── Revision bumper ───────────────────────────────────────────────────────────
@@ -925,7 +945,7 @@ export function bumpRevisionAfterExport(
         (_match, prefix: string, q: string) => `${prefix}${q}${nextRev}${q}`,
     );
 
-    const updated = `---\n${yaml}\n---\n${parsed.body}`;
+    const updated = `---\n${yaml}\n---\n${verbatimBody(content, parsed.body)}`;
     writeFileAtomic(markdownFile, updated);
     log(`Bumped revision: ${lastRevEntry.revision} → ${nextRev}, status reset to Work In Progress`);
     // Returned so `--watch` can recognise this write as its own.
