@@ -8,6 +8,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **The status bar and the export progress popup say Platen Markdown Export.**
+  Both still read "Markdown Export" after 1.1.2 renamed the right-click
+  submenu, so the extension went by two names.
+
 ## [1.1.2] - 2026-10-05
 
 ### Changed

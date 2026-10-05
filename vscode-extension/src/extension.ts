@@ -1085,7 +1085,7 @@ function notificationReporter(title: string): RunReporter {
     let settle:   () => void = () => { /* replaced synchronously by withProgress */ };
 
     void vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: `Markdown Export: ${title}…`, cancellable: true },
+        { location: vscode.ProgressLocation.Notification, title: `Platen Markdown Export: ${title}…`, cancellable: true },
         (_progress, token) => new Promise<void>((resolve) => {
             token.onCancellationRequested(() => onCancel());
             settle = resolve;
@@ -1106,7 +1106,7 @@ function notificationReporter(title: string): RunReporter {
 }
 
 /** Idle text for the shared status-bar item; also what a finished run fades back to. */
-const STATUS_LABEL = 'Markdown Export';
+const STATUS_LABEL = 'Platen Markdown Export';
 const STATUS_IDLE = `$(file-pdf) ${STATUS_LABEL}`;
 
 /**
