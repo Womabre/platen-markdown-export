@@ -37,6 +37,14 @@ for, so the result message offers the install command to copy instead.
   `Platen Markdown Export: Theme Markdown Preview Enhanced in This Workspace` once. See
   *Live preview in your theme* in the main README for what a preview can and
   cannot show.
+- **Frontmatter suggestions** — inside a document's frontmatter, typing a key
+  suggests every key the exporter reads (minus the ones already set), with its
+  description, and `Key: ` suggests its values: `Classification`, `Orientation`,
+  `PDF Variant`, booleans, your installed themes for `Theme`, and the chosen
+  theme's styles for `Style`. Hovering a key describes it. The key list comes
+  from the CLI's own `--frontmatter-schema`, so it always matches the exporter
+  that will read the document. Turn off with
+  `platenMarkdownExport.frontmatterCompletion: false`.
 - **Context menu** on `.md`/`.html` files (editor right-click and Explorer right-click).
 - **Commands** (Command Palette → "Platen Markdown Export"):
   - `Platen Markdown Export: Export` — uses your configured mode / the document's `Mode` frontmatter.
@@ -98,6 +106,7 @@ someone else's repository and saving a Markdown file with a `Mode:` key ran
 | `platenMarkdownExport.env` | `{}` | process env (e.g. Typekit URLs) | user only |
 | `platenMarkdownExport.exportOnSave` | `true` | — | workspace |
 | `platenMarkdownExport.preview.enabled` | `true` | — | workspace |
+| `platenMarkdownExport.frontmatterCompletion` | `true` | — | workspace |
 
 
 **"User only"** is VS Code's `machine` scope: the setting can be changed in your

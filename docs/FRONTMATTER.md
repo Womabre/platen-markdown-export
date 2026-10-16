@@ -7,6 +7,16 @@ markdown feature set.
 
 All keys are case-insensitive (`Title:` or `title:`).
 
+A key that looks like a misspelling of one of these (`Revison`, `Clasification`,
+`cover_title_color`) is reported as a warning with the key it probably meant, and
+fails the export under `--strict`. Keys that are nowhere near one of ours, such
+as another tool's `tags` or `marp`, are left alone. The keys inside
+`Document Info` and `Variables` are your own labels and are never checked.
+
+The full key list is also available as a JSON Schema:
+`platen-markdown-export --frontmatter-schema`, or `schema/frontmatter.schema.json`
+in the package.
+
 ```yaml
 ---
 Title: My Document — Subtitle         # text after " — " (or ": ") becomes a cover subtitle

@@ -3,6 +3,7 @@ import type { ParsedArgs, FrontmatterAnswers } from './types';
 import { listThemes, listThemeEntries, loadTheme, DEFAULT_THEME,
          setThemeRoots, themeRootsFromEnv, splitThemePath } from './theme';
 import { frontmatterTemplate } from './frontmatter';
+import { frontmatterJsonSchema } from './frontmatter-keys';
 import { discoveredThemeRoots } from './projectconfig';
 import { ExitError } from './errors';
 import { PREVIEW_FORMATS, runPreviewKit, type PreviewFormat } from './preview-kit';
@@ -83,6 +84,8 @@ Options:
       --answers <file.json>  With --init: fill the block in from a JSON object
                            instead of the placeholders. Keys mirror the
                            frontmatter (title, author, theme, style, mode, …)
+      --frontmatter-schema  Print a JSON Schema of every frontmatter key and exit,
+                           for an editor or a CI validator to check documents with
       --preview-kit <dir>  Write live-preview stylesheets for every theme and style
                            on the search path into <dir> and exit — the export's
                            own CSS, for a Markdown previewer to show a document
@@ -240,15 +243,6 @@ function handleImmediateFlags(argv: string[]): void {
     // Before any theme is read — see `applyThemeRoots`.
     applyThemeRoots(tokens);
 
-    // Printed rather than written: the CLI has no business creating or editing a
-    // file the user has not named, and `--init > report.md` composes with
-    // everything else. The VS Code extension inserts the same block into the
-    // open buffer instead, where it is undoable.
-    //
-    // `--answers <file>` fills it in from a JSON object instead of the
-    // placeholders. That is what the extension's new-document wizard runs, so
-    // there is exactly one implementation of answers → frontmatter rather than a
-    // second one in TypeScript that compiles for the editor.
     // Writes files rather than printing, but only into the directory named on
     // the command line — the one thing `--init` below declines to do is create
     // a file nobody asked for.
@@ -266,12 +260,26 @@ function handleImmediateFlags(argv: string[]): void {
         }), 0);
     }
 
+    // Printed rather than written: the CLI has no business creating or editing a
+    // file the user has not named, and `--init > report.md` composes with
+    // everything else. The VS Code extension inserts the same block into the
+    // open buffer instead, where it is undoable.
+    //
+    // `--answers <file>` fills it in from a JSON object instead of the
+    // placeholders. That is what the extension's new-document wizard runs, so
+    // there is exactly one implementation of answers → frontmatter rather than a
+    // second one in TypeScript that compiles for the editor.
     if (has('--init')) {
         const answersFile = peekFlag(tokens, '--answers');
         throw new ExitError(frontmatterTemplate(undefined, readAnswers(answersFile)), 0);
     }
     if (has('--answers'))
         throw new ExitError('Error: --answers only means something with --init\n', 2);
+
+    // Generated from the key table in frontmatter-keys.ts, so it cannot describe
+    // a key the exporter does not read. Printed, like --init, for redirecting.
+    if (has('--frontmatter-schema'))
+        throw new ExitError(JSON.stringify(frontmatterJsonSchema(), null, 2) + '\n', 0);
 
     if (has('--list-themes')) {
         // `--json` because a UI has to parse this. Scraping the human list would
@@ -434,6 +442,7 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedArgs {
             case '--json':                  json           = bare(flag, value); break;
             // Consumed by the pre-pass; accepted here so it is not "unknown".
             case '--init':                  bare(flag, value); break;
+            case '--frontmatter-schema':    bare(flag, value); break;
 
             default:
                 if (!flag.startsWith('-')) { positional.push(flag); break; }

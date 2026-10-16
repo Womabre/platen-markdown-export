@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 'use strict';
 
-import { findWeasyprint, runBootstrap } from './bootstrap';
-import { setupStatus, formatSetupStatus } from './setup-status';
+import { findWeasyprint } from './bootstrap';
+import { standaloneCommand } from './commands';
 import * as fs                      from 'fs';
 import * as path                    from 'path';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { version: APP_VERSION } = require('../package.json') as { version: string };
 import { parseArgs, resolveThemeRoots } from './cli';
-import { resolveExportPlan, resolveThemeName, type ExportPlan } from './plan';
+import { resolveExportPlan, resolveThemeName, resolveInputPaths, type ExportPlan } from './plan';
 import { log, logResult }            from './logger';
 import { extractFrontmatter, bumpRevisionAfterExport, isReleasedStatus } from './frontmatter';
 import { convertMarkdownToHtml, prepareSourceUpdates, type PendingSourceUpdate } from './markdown';
@@ -32,7 +32,6 @@ import { spawn } from 'child_process';
 import { validate }                 from './validate';
 import { writeFileAtomic }          from './fsutil';
 import { summarizePdf }             from './pdfinfo';
-import { clearCache }               from './cache';
 import { literal }                  from './strings';
 import { CONFIG_WARNINGS }           from './config';
 import { setQuiet, resetWarnings, warningCount } from './logger';
@@ -581,30 +580,9 @@ export async function main(opts: { inWatch?: boolean; argv?: string[] } = {}): P
     // whether to be quiet — surfaced here so they read like any other warning.
     if (!opts.inWatch) for (const w of CONFIG_WARNINGS) log(w);
 
-    // `--setup` installs the external binaries and stops — no document is read.
-    if (setup) { runBootstrap(); return NOTHING_EXPORTED; }
-
-    // `--check-setup` reports what `--setup` would install, and installs nothing.
-    if (checkSetup) {
-        // The extension parses --json from stdout, so detection's own progress
-        // lines ("draw.io CLI: …") must not land there first. Warnings still
-        // reach stderr.
-        if (json) setQuiet(true);
-        const components = await setupStatus();
-        logResult(json
-            ? JSON.stringify({ components }, null, 2)
-            : formatSetupStatus(components).split('\n').join('\n  '));
-        return NOTHING_EXPORTED;
-    }
-
-    // Likewise `--clear-cache`: it empties the asset cache and stops. Nothing in
-    // there is authored by anyone — every entry is a re-fetchable remote asset —
-    // so this needs no confirmation and loses nothing but the next export's speed.
-    if (clearCacheFlag) {
-        const { dir, existed } = clearCache();
-        logResult(existed ? `✔ Cache cleared: ${dir}` : `Nothing to clear — no cache at ${dir}`);
-        return NOTHING_EXPORTED;
-    }
+    // `--setup`, `--check-setup` and `--clear-cache` read no document — see commands.ts.
+    const command = standaloneCommand({ setup, checkSetup, json, clearCache: clearCacheFlag });
+    if (command) { await command(); return NOTHING_EXPORTED; }
 
     // `--watch` drives repeated calls back into this function with `inWatch`
     // set, so everything below runs per change exactly as a single export does.
@@ -621,16 +599,7 @@ export async function main(opts: { inWatch?: boolean; argv?: string[] } = {}): P
     // done nothing. With the VS Code extension exporting on save, that render
     // ran on every save of every .md in the workspace — READMEs and scratch
     // notes included — and was thrown away every time.
-    const isMarkdownInput = inputFile.endsWith('.md');
-    let htmlFile      = inputFile;
-    let markdownFile: string | null = inputFile;
-
-    if (isMarkdownInput) {
-        htmlFile = inputFile.replace(/\.md$/, '.html');
-    } else {
-        const possibleMd = inputFile.replace(/\.html$/, '.md');
-        markdownFile = fs.existsSync(possibleMd) ? possibleMd : null;
-    }
+    const { isMarkdownInput, htmlFile, markdownFile } = resolveInputPaths(inputFile);
 
     // ── Frontmatter ───────────────────────────────────────────────────────────
 

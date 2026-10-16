@@ -8,6 +8,8 @@ import {
     frontmatterTemplate, isOwnCli, usableCandidate, quoteArg, EXIT_MESSAGES,
     themePathArgs, parseThemeList, themeLabel, parseDocumentInfo, shouldPromptForReleaseNote,
     applyWizardFeatures, suggestFileName, validateTitle, WIZARD_FEATURES,
+    themePickItems, themeAnswer, parseStyleList, MODE_CHOICES, newDocumentContent, MARKDOWN_ONLY_EXT,
+    type ThemeEntry,
     shouldExportOnSave, exportOnSaveReason,
     buildCliArgs, hasConfiguredMode,
     DEFAULT_INFOGRAPHIC_ICONS, WEAVEFOX_WARNING,
@@ -769,5 +771,55 @@ describe('missingKey', () => {
 
     it('differs once the set does, so a changed set is asked about again', () => {
         assert.notEqual(missingKey(deps('chromium')), missingKey(deps('chromium', 'drawio')));
+    });
+});
+
+// ── Wizard helpers ────────────────────────────────────────────────────────────
+
+describe('wizard helpers', () => {
+    const themes: ThemeEntry[] = [
+        { name: 'default', displayName: 'Default', dir: '/b/default', source: 'builtin', root: '/b' },
+        { name: 'markedapp-byword', displayName: 'Byword', dir: '/b/markedapp-byword', source: 'builtin', root: '/b' },
+        { name: 'acme-theme', displayName: 'Acme', dir: '/ext/acme-theme', source: 'external', root: '/ext' },
+        { name: 'legacy', dir: '/old/legacy', source: 'external', root: '/old' },
+    ];
+
+    it('labels themes by folder, describes their own name and source', () => {
+        const items = themePickItems(themes);
+        assert.deepEqual(items.map(i => i.label), ['default', 'markedapp-byword', 'acme-theme', 'legacy']);
+        assert.equal(items[0].description, 'built-in', 'a name that only differs in case is not repeated');
+        assert.equal(items[1].description, '(Byword) · built-in');
+        assert.equal(items[2].description, '(Acme) · external');
+        assert.equal(items[2].detail, '/ext/acme-theme', 'an external theme shows where it lives');
+        assert.equal(items[0].detail, undefined);
+    });
+
+    it('writes the theme\'s own name, falling back to the folder for an older CLI', () => {
+        assert.equal(themeAnswer(themes, 'acme-theme'), 'Acme');
+        assert.equal(themeAnswer(themes, 'legacy'), 'legacy');
+        assert.equal(themeAnswer(themes, 'not-listed'), 'not-listed');
+    });
+
+    it('parses --list-styles --json and degrades to no styles', () => {
+        assert.deepEqual(parseStyleList('{"theme":"default","styles":["Navy","Grey"]}'), ['Navy', 'Grey']);
+        for (const bad of [null, '', 'Available styles in theme "default":\n  Navy', '{"styles":"Navy"}', '[]'])
+            assert.deepEqual(parseStyleList(bad), [], String(bad));
+        assert.deepEqual(parseStyleList('{"styles":["Navy",3,null]}'), ['Navy']);
+    });
+
+    it('offers modes the CLI accepts', () => {
+        for (const { label } of MODE_CHOICES)
+            for (const mode of label.split(',').map(m => m.trim()))
+                assert.ok(['pdf', 'html'].includes(mode), mode);
+    });
+
+    it('puts the title under the frontmatter as the first heading', () => {
+        assert.equal(newDocumentContent('---\nTitle: T\n---\n\n', 'T'), '---\nTitle: T\n---\n\n# T\n\n');
+        assert.equal(newDocumentContent('---\n---\n', undefined), '---\n---\n');
+    });
+
+    it('treats only .md and .markdown as Markdown', () => {
+        assert.ok(MARKDOWN_ONLY_EXT.has('.md') && MARKDOWN_ONLY_EXT.has('.markdown'));
+        assert.ok(!MARKDOWN_ONLY_EXT.has('.html'));
     });
 });

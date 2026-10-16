@@ -59,6 +59,9 @@ export function optsOutOfExportOnSave(text: string): boolean {
     return /^(false|no|off|0)$/i.test(m[1].trim().replace(/^["']|["']$/g, ''));
 }
 
+/** The extensions a frontmatter command or export-on-save treats as Markdown. */
+export const MARKDOWN_ONLY_EXT: ReadonlySet<string> = new Set(['.md', '.markdown']);
+
 /** A document already has frontmatter if it begins (after an optional BOM) with a `---` fence. */
 export function hasFrontmatter(text: string): boolean {
     return /^\uFEFF?---\r?\n/.test(text);
@@ -461,6 +464,69 @@ export function validateTitle(value: string): string | null {
     if (!value.trim()) { return 'A title is required.'; }
     if (value.length > 200) { return 'That is too long for a document title.'; }
     return null;
+}
+
+/** One theme as the wizard's picker shows it. */
+export interface ThemePickItem {
+    label: string;
+    description: string;
+    detail?: string;
+}
+
+/**
+ * The wizard's theme picker: the folder name as the label, the theme's own name
+ * (when it differs) and where it comes from as the description, and an external
+ * theme's directory as the detail — so two themes of the same name can be told
+ * apart.
+ */
+export function themePickItems(themes: readonly ThemeEntry[]): ThemePickItem[] {
+    return themes.map(t => ({
+        label: t.name,
+        description: [themeLabel(t) === t.name ? '' : themeLabel(t).replace(`${t.name} `, ''),
+                      t.source === 'external' ? 'external' : 'built-in'].filter(Boolean).join(' · '),
+        detail: t.source === 'external' ? t.dir : undefined,
+    }));
+}
+
+/**
+ * What a picked theme is written into the document as: the name the theme calls
+ * itself, not the folder it happens to sit in.
+ *
+ * Writing the folder name put `Theme: acme-theme` into documents — an artefact of
+ * one machine's layout, which resolved here (the extension passes --theme-path)
+ * and failed everywhere else. The declared name is the theme's identity: it is
+ * what the cover shows, it survives the folder being moved or renamed, and it is
+ * what someone would have typed by hand. Both still resolve, so nothing that
+ * already works breaks.
+ */
+export function themeAnswer(themes: readonly ThemeEntry[], pickedLabel: string): string {
+    return themes.find(t => t.name === pickedLabel)?.displayName ?? pickedLabel;
+}
+
+/**
+ * Parses `--list-styles --json`, returning [] for anything unexpected — an older
+ * CLI, a theme that failed to load, output that is not JSON at all. No styles
+ * means the wizard skips the question, which is the right outcome for all three.
+ */
+export function parseStyleList(json: string | null): string[] {
+    try {
+        const styles = (JSON.parse(json ?? '{}') as { styles?: unknown }).styles;
+        return Array.isArray(styles) ? styles.filter((s): s is string => typeof s === 'string') : [];
+    } catch {
+        return [];
+    }
+}
+
+/** The export modes the wizard offers, in the order it offers them. */
+export const MODE_CHOICES: ReadonlyArray<{ label: string; detail: string }> = [
+    { label: 'pdf, html', detail: 'Both outputs on every export' },
+    { label: 'pdf',       detail: 'Print-quality PDF only' },
+    { label: 'html',      detail: 'Self-contained HTML only' },
+];
+
+/** A new document: the rendered frontmatter, then the title as its first heading. */
+export function newDocumentContent(frontmatter: string, title: string | undefined): string {
+    return title ? `${frontmatter}# ${title}\n\n` : frontmatter;
 }
 
 

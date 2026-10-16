@@ -1,0 +1,362 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Womabre/platen-markdown-export/main/schema/frontmatter.schema.json",
+  "title": "platen-markdown-export frontmatter",
+  "description": "YAML frontmatter keys read by platen-markdown-export. Keys are case-insensitive.",
+  "type": "object",
+  "properties": {
+    "Title": {
+      "description": "Document title. Text after a spaced \" — \" or \": \" becomes the cover subtitle.",
+      "type": "string"
+    },
+    "Document Info": {
+      "description": "Labelled rows rendered on the cover. Author, Date, Revision and Status are also read by the exporter; any other label is shown as written.",
+      "type": "object",
+      "properties": {
+        "Author": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "Date": {},
+        "Revision": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "Status": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "Revisions": {
+      "description": "Revision history table, oldest first. The last row is the current revision.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Revision": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "Date": {},
+          "Author": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "Remarks": {
+            "type": [
+              "string",
+              "number"
+            ]
+          }
+        }
+      }
+    },
+    "Revisions Visible": {
+      "description": "How many revision rows the cover shows (0 hides the table). Default 3.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "Status": {
+      "description": "Fallback for Document Info.Status. \"Released\" (or \"Vrijgegeven\") enables --release.",
+      "type": "string"
+    },
+    "Author": {
+      "description": "Fallback for Document Info.Author.",
+      "type": [
+        "string",
+        "number"
+      ]
+    },
+    "Date": {
+      "description": "Fallback for Document Info.Date."
+    },
+    "Revision": {
+      "description": "Legacy shorthand, used only when neither Document Info nor Revisions gives a revision.",
+      "type": [
+        "string",
+        "number"
+      ]
+    },
+    "Version": {
+      "description": "Alias of Revision. Legacy shorthand, used only when neither Document Info nor Revisions gives a revision.",
+      "x-aliasOf": "Revision",
+      "type": [
+        "string",
+        "number"
+      ]
+    },
+    "Mode": {
+      "description": "What to export: pdf, html, debug, or a comma-separated combination. Without it the document is not exported.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "enum": [
+              "pdf",
+              "html",
+              "debug"
+            ]
+          }
+        }
+      ]
+    },
+    "Export On Save": {
+      "description": "VS Code only: false keeps this document out of export-on-save.",
+      "type": "boolean"
+    },
+    "PDF Variant": {
+      "description": "Tags the PDF as a conformance level (PDF/A, PDF/UA, PDF/X), e.g. pdf/a-2b.",
+      "enum": [
+        "pdf/a-1b",
+        "pdf/a-2b",
+        "pdf/a-3b",
+        "pdf/a-2u",
+        "pdf/a-3u",
+        "pdf/a-4u",
+        "pdf/a-1a",
+        "pdf/a-2a",
+        "pdf/a-3a",
+        "pdf/a-4e",
+        "pdf/a-4f",
+        "pdf/ua-1",
+        "pdf/ua-2",
+        "pdf/x-1a",
+        "pdf/x-3",
+        "pdf/x-4",
+        "pdf/x-5g",
+        "debug"
+      ]
+    },
+    "Lang": {
+      "description": "Document language (en, nl, de, fr, es); sets generated labels.",
+      "type": "string"
+    },
+    "Theme": {
+      "description": "Brand package: a theme name (see --list-themes) or a theme directory.",
+      "type": "string"
+    },
+    "Style": {
+      "description": "Cover style: a named style of the theme (see --list-styles), or a {Name, Color, Image, Position, Overlay} mapping.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Name": {
+              "type": "string"
+            },
+            "Color": {
+              "type": "string"
+            },
+            "Image": {
+              "type": "string"
+            },
+            "Position": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "Overlay": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
+      ]
+    },
+    "Logo": {
+      "description": "Brand mark: a name from the theme's logos map, or a path.",
+      "type": "string"
+    },
+    "Cover Logo": {
+      "description": "A third-party logo on the cover: a path, or a list of {Path} and {Background} entries.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "Cover Page": {
+      "description": "false suppresses the cover but keeps the Style's colours.",
+      "type": "boolean"
+    },
+    "Cover Slogan": {
+      "description": "Replaces the theme's cover slogan; false removes it.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "const": false
+        }
+      ]
+    },
+    "Cover Address": {
+      "description": "Replaces the theme's cover address (a string or one line per list entry); false removes it.",
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        {
+          "const": false
+        }
+      ]
+    },
+    "Cover Title Color": {
+      "description": "Colour of the cover title, subtitle and rule: hex, rgb()/rgba() or a palette name.",
+      "type": "string"
+    },
+    "Cover Title Colour": {
+      "description": "Alias of Cover Title Color. Colour of the cover title, subtitle and rule: hex, rgb()/rgba() or a palette name.",
+      "x-aliasOf": "Cover Title Color",
+      "type": "string"
+    },
+    "Cover Footer Logo": {
+      "description": "The cover's bottom-right mark; false removes it.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "const": false
+        }
+      ]
+    },
+    "Footer Logo": {
+      "description": "The bottom-centre mark on every page; false removes it.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "const": false
+        }
+      ]
+    },
+    "Header": {
+      "description": "Running header text. Defaults to the title.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "Footer": {
+      "description": "Running footer text. Defaults to \"page N of M\".",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "Numbered Headings": {
+      "description": "Numbers ## to ###### hierarchically (1, 1.1, 1.1.1).",
+      "type": "boolean"
+    },
+    "Running Header": {
+      "description": "The top-left header follows the current section title.",
+      "type": "boolean"
+    },
+    "List of Tables": {
+      "description": "Index of captioned tables after the TOC.",
+      "type": "boolean"
+    },
+    "List of Figures": {
+      "description": "Index of captioned figures after the TOC.",
+      "type": "boolean"
+    },
+    "Code Line Numbers": {
+      "description": "Numbers every line of every fenced code block.",
+      "type": "boolean"
+    },
+    "Copy Buttons": {
+      "description": "On by default: a Copy button on every code block in the HTML export.",
+      "type": "boolean"
+    },
+    "Trademark Symbols": {
+      "description": "Converts (c), (r), (tm) to ©, ®, ™.",
+      "type": "boolean"
+    },
+    "Watermark": {
+      "description": "Diagonal stamp on every PDF page; true reuses Status. Never shown once Released.",
+      "type": [
+        "string",
+        "boolean"
+      ]
+    },
+    "Classification": {
+      "description": "Sensitivity label in the top-right margin.",
+      "enum": [
+        "Public",
+        "Internal",
+        "Confidential"
+      ]
+    },
+    "TOC Depth": {
+      "description": "Deepest heading level listed in the table of contents.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6
+    },
+    "Page Size": {
+      "description": "A3, A4, A5, Letter, Legal, Tabloid, or a \"W H\" pair. Default A4.",
+      "type": "string"
+    },
+    "Margins": {
+      "description": "@page margin as 1-4 CSS lengths (20mm, 25mm 15mm). Default 2cm.",
+      "type": "string"
+    },
+    "Orientation": {
+      "description": "Page orientation for the whole document.",
+      "enum": [
+        "portrait",
+        "landscape"
+      ]
+    },
+    "Variables": {
+      "description": "A mapping substituted into the body as {{Name}}.",
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number"
+        ]
+      }
+    }
+  },
+  "additionalProperties": true
+}
+

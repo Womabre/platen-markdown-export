@@ -42,14 +42,24 @@ export function jsonForScript(value: unknown): string {
     return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
-/** Levenshtein distance between two strings. */
-export function editDistance(a: string, b: string): number {
+/**
+ * Levenshtein distance between two strings.
+ *
+ * With `transpositions`, two adjacent letters swapped count as one edit rather
+ * than two (optimal string alignment) — `Titel` is one slip from `Title`, which
+ * is how a person makes it.
+ */
+export function editDistance(a: string, b: string, { transpositions = false } = {}): number {
+    let prevPrev: number[] = [];
     let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
     for (let i = 1; i <= a.length; i++) {
         const cur = [i];
         for (let j = 1; j <= b.length; j++) {
             cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+            if (transpositions && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
+                cur[j] = Math.min(cur[j], prevPrev[j - 2] + 1);
         }
+        prevPrev = prev;
         prev = cur;
     }
     return prev[b.length];

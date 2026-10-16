@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as path from 'path';
 import { ExitError } from '../errors';
 import { CONFIG } from '../config';
-import { resolveThemeName, resolveStylesheet, outputPathFor, resolveExportPlan } from '../plan';
+import { resolveThemeName, resolveStylesheet, outputPathFor, resolveExportPlan, resolveInputPaths } from '../plan';
 import type { ExportPlanInput } from '../plan';
 
 const base: ExportPlanInput = {
@@ -253,5 +253,32 @@ describe('resolveExportPlan', () => {
         // would be a second source of truth. `resolveThemeName` is tested above.
         const p = plan({ cliTheme: 'modern', cliStylesheet: 'none' });
         assert.equal(p.stylesheetPath, null);
+    });
+});
+
+// ── resolveInputPaths ─────────────────────────────────────────────────────────
+
+describe('resolveInputPaths', () => {
+    const never = () => false;
+
+    it('treats a .md input as its own source, exporting beside it', () => {
+        assert.deepEqual(resolveInputPaths('/docs/report.md', never), {
+            isMarkdownInput: true, htmlFile: '/docs/report.html', markdownFile: '/docs/report.md',
+        });
+    });
+
+    it('reads frontmatter from the .md beside an .html input when there is one', () => {
+        const exists = (f: string) => f === '/docs/report.md';
+        assert.deepEqual(resolveInputPaths('/docs/report.html', exists), {
+            isMarkdownInput: false, htmlFile: '/docs/report.html', markdownFile: '/docs/report.md',
+        });
+    });
+
+    it('has no markdown source for a lone .html input', () => {
+        assert.equal(resolveInputPaths('/docs/report.html', never).markdownFile, null);
+    });
+
+    it('only rewrites the extension, never a ".md" elsewhere in the path', () => {
+        assert.equal(resolveInputPaths('/x.md/notes.md', never).htmlFile, '/x.md/notes.html');
     });
 });

@@ -4,6 +4,7 @@ import { writeFileAtomic } from './fsutil';
 import { log } from './logger';
 import { literal } from './strings';
 import { PDF_VARIANTS } from './config';
+import { unknownKeyWarnings } from './frontmatter-keys';
 import type {
     FrontmatterAnswers,
     FrontmatterData,
@@ -417,6 +418,8 @@ export function extractFrontmatter(markdownFile: string | null, source?: string)
     if (source === undefined && !fs.existsSync(markdownFile)) return empty;
 
     const { attributes } = frontMatter(source ?? fs.readFileSync(markdownFile, 'utf8'));
+    // A misspelled key is read by nobody, so it is reported here or nowhere.
+    for (const warning of unknownKeyWarnings(attributes)) log(warning);
     const at   = reader(attributes);
     const info = (at('Document Info') ?? {}) as Record<string, unknown>;
     const atInfo = reader(info);

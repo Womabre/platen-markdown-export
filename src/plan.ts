@@ -203,3 +203,32 @@ export function resolveExportPlan(input: ExportPlanInput): ExportPlan {
         pdfOutputFile,
     };
 }
+
+// ── Input paths ───────────────────────────────────────────────────────────────
+
+export interface InputPaths {
+    /** Whether the file named on the command line is Markdown (else HTML). */
+    isMarkdownInput: boolean;
+    /** The input with a `.html` extension — the base for derived output names. */
+    htmlFile: string;
+    /**
+     * The Markdown source whose frontmatter drives the export: the input itself,
+     * or for an `.html` input the `.md` beside it when there is one.
+     */
+    markdownFile: string | null;
+}
+
+/**
+ * Which files an input names. Path work only, so it can run before anything is
+ * read — the Markdown → HTML conversion waits until `main()` knows there is a
+ * `Mode` to export.
+ */
+export function resolveInputPaths(
+    inputFile: string,
+    exists: (file: string) => boolean = fs.existsSync,
+): InputPaths {
+    if (inputFile.endsWith('.md'))
+        return { isMarkdownInput: true, htmlFile: inputFile.replace(/\.md$/, '.html'), markdownFile: inputFile };
+    const possibleMd = inputFile.replace(/\.html$/, '.md');
+    return { isMarkdownInput: false, htmlFile: inputFile, markdownFile: exists(possibleMd) ? possibleMd : null };
+}

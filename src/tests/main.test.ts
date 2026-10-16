@@ -440,6 +440,15 @@ describe('main() — --strict', () => {
         assert.ok(fs.statSync(out).size > 0);
     });
 
+    it('fails a misspelled frontmatter key with exit 6', async () => {
+        // `Numbred Headings` is read by nobody; before the key table it passed --strict.
+        const file = write('strict-typo', clean().replace('Mode: html', 'Mode: html\nNumbred Headings: true'));
+        await assert.rejects(
+            () => main({ argv: ['--quiet', '--no-bump', '--strict', file] }),
+            (err: unknown) => err instanceof ExitError && err.exitCode === 6,
+        );
+    });
+
     it('passes a clean document', async () => {
         const file = write('strict-clean', clean());
         await main({ argv: ['--quiet', '--no-bump', '--strict', file] });

@@ -8,6 +8,42 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-16
+
+### Added
+
+- **Misspelled frontmatter keys are reported.** `Revison: 2` or
+  `Clasification: Internal` used to be ignored without a word, so the export ran
+  and the setting silently did nothing. Now you get a warning that names the key
+  it probably meant, and `--strict` fails on it. The same goes for keys inside a
+  `Revisions` row, an inline `Style` and a `Cover Logo` entry, and for the right
+  key written with `_` or `-` (`cover_title_color`). Keys that look nothing like
+  ours, such as another tool's `tags` or `marp`, are still left alone.
+- **`--frontmatter-schema` prints a JSON Schema of every frontmatter key**, for
+  an editor or a CI validator. The same schema ships in the package as
+  `schema/frontmatter.schema.json`.
+- **VS Code: suggestions and hover help inside the frontmatter.** Start typing
+  a key and the extension offers every key the exporter reads, leaving out the
+  ones the document already sets. After `Key: ` it offers the values: the
+  options for `Classification`, `Orientation` and `PDF Variant`, `true`/`false`,
+  your installed themes for `Theme`, and that theme's styles for `Style`.
+  Hovering a key explains it. The list comes from the CLI's
+  `--frontmatter-schema`, so it always matches the exporter. Red Hat's YAML
+  extension cannot do this: it does not look inside Markdown files
+  (redhat-developer/vscode-yaml#207). Turn it off with
+  `platenMarkdownExport.frontmatterCompletion: false`.
+
+### Changed
+
+- **One table now lists every frontmatter key** (`src/frontmatter-keys.ts`). The
+  typo warnings and the schema are both built from it, and a test fails when the
+  exporter reads a key the table does not list.
+- **Internal tidy-up with no change in behaviour.** `--setup`, `--check-setup`
+  and `--clear-cache` moved out of `main()` into `src/commands.ts`, and input path
+  resolution into `plan.ts`, both with tests. The VS Code extension's two wizards
+  moved from `extension.ts` into `wizard.ts`, and the logic they use moved into
+  `core.ts` with tests.
+
 ## [1.1.3] - 2026-10-05
 
 ### Changed
