@@ -268,6 +268,7 @@ describe('new-document wizard', () => {
         stub('showInputBox', (async (opts?: vscode.InputBoxOptions) =>
             /title/i.test(opts?.title ?? '') ? 'Integration Doc: Draft' : 'Wouter, W.') as never);
         stub('showQuickPick', (async (items: unknown, opts?: vscode.QuickPickOptions) => {
+            if (opts?.title === 'Document type') { return pickLabelled('Blank document')(items); }
             if (/theme/i.test(opts?.title ?? '')) { return pickLabelled('default')(items); }
             if (/style/i.test(opts?.title ?? '')) { return pickLabelled('Navy')(items); }
             if (/mode/i.test(opts?.title ?? '')) { return pickLabelled('html')(items); }
@@ -302,21 +303,71 @@ describe('new-document wizard', () => {
         assert.ok(text.trimEnd().endsWith('# Integration Doc: Draft'), 'a heading follows the frontmatter');
     });
 
-    it('writes nothing when the first question is cancelled', async () => {
-        const before = fs.readdirSync(workDir);
-        stub('showInputBox', (async () => undefined) as never);
-        stub('showSaveDialog', (async () => {
-            throw new Error('the save dialog must not be reached after a cancel');
+    it('asks for the document type first, offering a blank document and the built-in templates', async () => {
+        const offered: string[] = [];
+        stub('showQuickPick', (async (items: unknown, opts?: vscode.QuickPickOptions) => {
+            if (opts?.title === 'Document type') {
+                offered.push(...((await items) as vscode.QuickPickItem[]).map(i => i.label));
+            }
+            return undefined;
         }) as never);
 
         await vscode.commands.executeCommand('platenMarkdownExport.newDocument');
+        assert.deepEqual(offered.slice(0, 1), ['Blank document']);
+        for (const name of ['report', 'technical-design', 'meeting-notes', 'how-to'])
+            assert.ok(offered.includes(name), `"${name}" should be offered: ${offered.join(', ')}`);
+    });
+
+    it('writes nothing when the first question is cancelled', async () => {
+        // The document type is the first question now.
+        const before = fs.readdirSync(workDir);
+        stub('showQuickPick', (async () => undefined) as never);
+
+        await vscode.commands.executeCommand('platenMarkdownExport.newDocument');
         assert.deepEqual(fs.readdirSync(workDir), before, 'a cancelled wizard must leave nothing behind');
+    });
+
+    it('writes nothing when the title is cancelled', async () => {
+        const before = fs.readdirSync(workDir);
+        stub('showQuickPick', pickLabelled('Blank document') as never);
+        stub('showInputBox', (async () => undefined) as never);
+
+        await vscode.commands.executeCommand('platenMarkdownExport.newDocument');
+        assert.deepEqual(fs.readdirSync(workDir), before, 'a cancelled wizard must leave nothing behind');
+    });
+
+    it('writes a whole document from a template, skipping the questions it answers', async () => {
+        const target = path.join(workDir, 'from-template.md');
+        const asked: string[] = [];
+
+        stub('showInputBox', (async (opts?: vscode.InputBoxOptions) => {
+            asked.push(opts?.title ?? '');
+            return /title/i.test(opts?.title ?? '') ? 'Weekly sync' : 'Wouter';
+        }) as never);
+        stub('showQuickPick', (async (items: unknown, opts?: vscode.QuickPickOptions) => {
+            asked.push(opts?.title ?? '');
+            if (opts?.title === 'Document type') { return pickLabelled('meeting-notes')(items); }
+            if (/mode/i.test(opts?.title ?? '')) { return pickLabelled('html')(items); }
+            return [];
+        }) as never);
+        stub('showSaveDialog', (async () => vscode.Uri.file(target)) as never);
+
+        await vscode.commands.executeCommand('platenMarkdownExport.newDocument');
+
+        assert.ok(fs.existsSync(target), 'the wizard wrote no file');
+        const text = fs.readFileSync(target, 'utf8');
+        assert.ok(!asked.some(t => /theme|style/i.test(t)), `the template sets theme and style: ${asked.join(' | ')}`);
+        assert.ok(text.includes('Cover Page: false'), 'the template\'s own keys');
+        assert.ok(text.includes('Mode: html'), 'the answered mode');
+        assert.ok(text.includes('# Weekly sync') && text.includes('## Action items'), 'the template\'s body');
+        assert.ok(text.includes('**Minutes by:** Wouter'), '{{Author}} filled in');
     });
 
     it('writes nothing when the save dialog is dismissed', async () => {
         const before = fs.readdirSync(workDir);
         stub('showInputBox', (async () => 'Doc') as never);
         stub('showQuickPick', (async (items: unknown, opts?: vscode.QuickPickOptions) => {
+            if (opts?.title === 'Document type') { return pickLabelled('Blank document')(items); }
             if (/theme/i.test(opts?.title ?? '')) { return pickLabelled('default')(items); }
             if (/style/i.test(opts?.title ?? '')) { return pickLabelled('Navy')(items); }
             if (/mode/i.test(opts?.title ?? '')) { return pickLabelled('html')(items); }
@@ -337,6 +388,7 @@ describe('frontmatter wizard', () => {
         stub('showInputBox', (async (opts?: vscode.InputBoxOptions) =>
             /title/i.test(opts?.title ?? '') ? 'Filled In' : 'Wouter') as never);
         stub('showQuickPick', (async (items: unknown, opts?: vscode.QuickPickOptions) => {
+            if (opts?.title === 'Document type') { return pickLabelled('Blank document')(items); }
             if (/theme/i.test(opts?.title ?? '')) { return pickLabelled('default')(items); }
             if (/style/i.test(opts?.title ?? '')) { return pickLabelled('Navy')(items); }
             if (/mode/i.test(opts?.title ?? '')) { return pickLabelled('pdf')(items); }
@@ -355,6 +407,26 @@ describe('frontmatter wizard', () => {
         assert.ok(text.includes('Some prose I wrote earlier.'), 'existing content must be kept');
     });
 
+    it('adds only the template\'s frontmatter to a document that already has content', async () => {
+        const file = path.join(workDir, 'needs-template.md');
+        fs.writeFileSync(file, '# Started\n\nMy own text.\n');
+
+        stub('showInputBox', (async (opts?: vscode.InputBoxOptions) =>
+            /title/i.test(opts?.title ?? '') ? 'Design' : 'Wouter') as never);
+        stub('showQuickPick', (async (items: unknown, opts?: vscode.QuickPickOptions) => {
+            if (opts?.title === 'Document type') { return pickLabelled('technical-design')(items); }
+            if (/mode/i.test(opts?.title ?? '')) { return pickLabelled('pdf')(items); }
+            return [];
+        }) as never);
+
+        await vscode.commands.executeCommand('platenMarkdownExport.frontmatterWizard', vscode.Uri.file(file));
+
+        const text = (await vscode.workspace.openTextDocument(vscode.Uri.file(file))).getText();
+        assert.ok(text.includes('Code Line Numbers: true'), `the template's keys:\n${text.slice(0, 400)}`);
+        assert.ok(!text.includes('## Requirements'), 'the template\'s outline must not be inserted');
+        assert.ok(text.trimEnd().endsWith('My own text.'), 'existing content kept, after the block');
+    });
+
     it('refuses a document that already has frontmatter', async () => {
         // Rewriting a block someone has edited is not a wizard's decision.
         const file = path.join(workDir, 'already-has.md');
@@ -368,6 +440,30 @@ describe('frontmatter wizard', () => {
         await vscode.commands.executeCommand('platenMarkdownExport.frontmatterWizard',
                                              vscode.Uri.file(file));
         assert.equal(fs.readFileSync(file, 'utf8'), before);
+    });
+});
+
+describe('frontmatter completion', () => {
+    it('suggests keys and values from the CLI\'s schema, and nothing in the body', async () => {
+        const file = path.join(workDir, 'complete.md');
+        fs.writeFileSync(file, ['---', 'Title: T', 'Numb', 'Classification: ', '---', '', 'Prose'].join('\n'));
+        const uri = vscode.Uri.file(file);
+        await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(uri));
+
+        const labels = async (line: number, character: number): Promise<string[]> => {
+            const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+                'vscode.executeCompletionItemProvider', uri, new vscode.Position(line, character));
+            return list.items
+                .filter(i => i.kind === vscode.CompletionItemKind.Property || i.kind === vscode.CompletionItemKind.Value)
+                .map(i => (typeof i.label === 'string' ? i.label : i.label.label));
+        };
+
+        const keys = await labels(2, 4);
+        assert.ok(keys.includes('Numbered Headings'), keys.join(', '));
+        assert.ok(!keys.includes('Title'), 'a key the document sets is not offered again');
+        assert.ok(!keys.includes('Cover Title Colour'), 'aliases are not offered');
+        assert.deepEqual(await labels(3, 16), ['Public', 'Internal', 'Confidential']);
+        assert.deepEqual(await labels(6, 3), []);
     });
 });
 
@@ -773,6 +869,38 @@ describe('runtime dependencies', () => {
     });
 });
 
+/**
+ * Makes every prompt a test did not stub fail at once, naming the prompt.
+ *
+ * A real QuickPick or input box in this host waits for a click that never comes.
+ * When the wizard gained a question its tests did not answer, that wait hung the
+ * CI job until GitHub killed it six hours later, with nothing in the log to say
+ * which prompt was open. A test that wants a prompt stubs it after this, which
+ * replaces the guard; `restores` undoes both.
+ */
+function guardPrompts(): void {
+    const refuse = (kind: string) => (async (...args: unknown[]) => {
+        const opts = args.find(a => a && typeof a === 'object' && !Array.isArray(a) && !(a instanceof Promise)) as
+            { title?: string; prompt?: string } | undefined;
+        throw new Error(`unstubbed ${kind}: "${opts?.title ?? opts?.prompt ?? '(untitled)'}" — the test must answer it`);
+    }) as never;
+    stub('showQuickPick', refuse('showQuickPick'));
+    stub('showInputBox', refuse('showInputBox'));
+    stub('showSaveDialog', refuse('showSaveDialog'));
+    stub('showOpenDialog', refuse('showOpenDialog'));
+}
+
+/** Backstop for anything else that waits forever; the prompt guard catches the usual cause. */
+const CASE_TIMEOUT_MS = 120_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, name: string): Promise<T> {
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`timed out after ${ms / 1000}s: ${name}`)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 export async function run(): Promise<void> {
     workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmex-integration-'));
 
@@ -782,7 +910,8 @@ export async function run(): Promise<void> {
     const failures: string[] = [];
     for (const c of cases) {
         try {
-            await c.fn();
+            guardPrompts();
+            await withTimeout(Promise.resolve(c.fn()), CASE_TIMEOUT_MS, c.name);
             console.log(`  ok  ${c.name}`);
         } catch (err: unknown) {
             failures.push(`${c.name}\n      ${err instanceof Error ? err.message : String(err)}`);

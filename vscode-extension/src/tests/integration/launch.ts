@@ -19,7 +19,9 @@ import { runTests } from '@vscode/test-electron';
 /** An installed VS Code's Electron binary, or null to let the harness download one. */
 function installedVSCode(): string | null {
     const candidates = process.platform === 'darwin'
-        ? ['/Applications/Visual Studio Code.app/Contents/MacOS/Electron']
+        // Newer releases name the binary `Code`; older ones `Electron`.
+        ? ['/Applications/Visual Studio Code.app/Contents/MacOS/Code',
+           '/Applications/Visual Studio Code.app/Contents/MacOS/Electron']
         : process.platform === 'win32'
             ? [path.join(process.env.LOCALAPPDATA ?? '', 'Programs', 'Microsoft VS Code', 'Code.exe')]
             : ['/usr/share/code/code', '/usr/bin/code', '/snap/bin/code'];

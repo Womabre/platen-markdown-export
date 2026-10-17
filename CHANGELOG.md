@@ -8,6 +8,28 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-17
+
+### Fixed
+
+- **The extension's integration tests no longer hang CI.** 1.3.0 made
+  "Document type" the wizard's first question, and a test that answered only the
+  title left a real picker open. Nothing ever answered it, so the CI job ran until
+  GitHub stopped it after six hours. The tests now answer the new step and cover
+  templates in both wizards and frontmatter suggestions. The test runner also
+  makes any prompt a test did not answer fail at once, naming the prompt, and
+  gives each test a two-minute limit.
+- The integration tests use an installed VS Code again instead of downloading
+  one. Newer releases name the macOS binary `Code` rather than `Electron`.
+
+### Security
+
+- **sharp 0.35.5**, for an advisory in its bundled librsvg (CVE-2026-96889).
+- **source-map-js 1.2.2** (pulled in through `@antv/infographic`) and
+  **dompurify 3.4.17** (through `mermaid`), from `npm audit fix`. The remaining
+  low and moderate findings need breaking upgrades of `front-matter`, `mermaid`
+  and `@traptitech/markdown-it-katex`, and are left for a separate change.
+
 ## [1.3.0] - 2026-10-16
 
 ### Added
