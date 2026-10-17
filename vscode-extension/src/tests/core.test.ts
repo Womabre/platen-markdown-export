@@ -9,6 +9,8 @@ import {
     themePathArgs, parseThemeList, themeLabel, parseDocumentInfo, shouldPromptForReleaseNote,
     applyWizardFeatures, suggestFileName, validateTitle, WIZARD_FEATURES,
     themePickItems, themeAnswer, parseStyleList, MODE_CHOICES, newDocumentContent, MARKDOWN_ONLY_EXT,
+    parseTemplateList, templatePickItems, templateSets, wizardQuestions, splitScaffold, BLANK_TEMPLATE,
+    type TemplateInfo,
     type ThemeEntry,
     shouldExportOnSave, exportOnSaveReason,
     buildCliArgs, hasConfiguredMode,
@@ -821,5 +823,47 @@ describe('wizard helpers', () => {
     it('treats only .md and .markdown as Markdown', () => {
         assert.ok(MARKDOWN_ONLY_EXT.has('.md') && MARKDOWN_ONLY_EXT.has('.markdown'));
         assert.ok(!MARKDOWN_ONLY_EXT.has('.html'));
+    });
+});
+
+// ── Template helpers ──────────────────────────────────────────────────────────
+
+describe('template helpers', () => {
+    const report: TemplateInfo = {
+        name: 'report', description: 'Formal report', file: '/t/report/template.md', source: 'builtin',
+        sets: ['Theme', 'Style', 'Classification'], theme: 'default',
+    };
+    const ours: TemplateInfo = {
+        name: 'offer', description: 'Our offer', file: '/ext/offer/template.md', source: 'external',
+        sets: ['mode'], theme: null,
+    };
+
+    it('parses --list-templates --json and degrades to none', () => {
+        const json = JSON.stringify([{ ...report, dir: 'ignored' }, { name: 'broken' }, { ...ours, sets: ['mode', 3] }]);
+        assert.deepEqual(parseTemplateList(json), [report, ours]);
+        for (const bad of [null, '', 'Error: unknown option "--list-templates"', '{}', '[null]'])
+            assert.deepEqual(parseTemplateList(bad), [], String(bad));
+    });
+
+    it('offers a blank document first, then each template', () => {
+        const items = templatePickItems([report, ours]);
+        assert.deepEqual(items.map(i => i.label), [BLANK_TEMPLATE, 'report', 'offer']);
+        assert.equal(items[2].description, 'Our offer · external');
+        assert.equal(items[2].detail, '/ext/offer/template.md');
+        assert.equal(items[1].detail, undefined);
+    });
+
+    it('skips the questions a template already answers, case-insensitively', () => {
+        assert.deepEqual(wizardQuestions(null), ['title', 'author', 'theme', 'style', 'mode']);
+        assert.deepEqual(wizardQuestions(report), ['title', 'author', 'mode']);
+        assert.deepEqual(wizardQuestions(ours), ['title', 'author', 'theme', 'style']);
+        assert.ok(templateSets(ours, 'Mode') && !templateSets(null, 'Mode'));
+    });
+
+    it('splits rendered output into frontmatter and body', () => {
+        const doc = '---\nTitle: T\n---\n\n# T\n\n## Agenda\n';
+        assert.deepEqual(splitScaffold(doc), { frontmatter: '---\nTitle: T\n---\n\n', body: '# T\n\n## Agenda\n' });
+        assert.deepEqual(splitScaffold('---\r\nTitle: T\r\n---\r\n'), { frontmatter: '---\r\nTitle: T\r\n---\r\n', body: '' });
+        assert.deepEqual(splitScaffold('no frontmatter'), { frontmatter: 'no frontmatter', body: '' });
     });
 });

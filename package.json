@@ -1,6 +1,6 @@
 {
   "name": "platen-markdown-export",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Converts Markdown to print-quality PDF via WeasyPrint, with swappable themes: cover pages, running headers/footers, revision tables and a rebuilt table of contents.",
   "license": "MIT",
   "main": "dist/index.js",
@@ -93,7 +93,8 @@
     "!themes/**/sample*_Rev*.html",
     "!themes/**/sample*_Rev*.pdf",
     "assets/",
-    "schema/"
+    "schema/",
+    "templates/"
   ],
   "publishConfig": {
     "access": "public"

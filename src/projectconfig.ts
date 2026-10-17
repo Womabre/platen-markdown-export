@@ -4,6 +4,7 @@ import * as path from 'path';
 import { log } from './logger';
 import { windowsAppDir } from './fsutil';
 import { splitThemePath } from './theme';
+import { unknownKeyWarnings } from './frontmatter-keys';
 
 /**
  * Configuration a document's own project carries, discovered rather than passed.
@@ -40,6 +41,10 @@ export interface ProjectConfig {
      * machine that checks the repository out.
      */
     themePaths?: string[];
+    /** Template roots, resolved the same way as `themePaths`. */
+    templatePaths?: string[];
+    /** Frontmatter keys applied to every document under this config that does not set them itself. */
+    frontmatterDefaults?: Record<string, unknown>;
 }
 
 /**
@@ -124,19 +129,29 @@ export function readConfig(file: string): ProjectConfig {
     }
 }
 
-/** The theme roots one config file contributes, resolved against its own directory. */
-export function themePathsFrom(file: string, home: string = os.homedir()): string[] {
-    const { themePaths } = readConfig(file);
-    if (themePaths === undefined) return [];
-    if (!Array.isArray(themePaths)) {
-        log(`WARNING: ${file}: "themePaths" should be an array of directories — ignoring it`);
+/** The directories one config file lists under `key`, resolved against its own directory. */
+function pathsFrom(file: string, key: 'themePaths' | 'templatePaths', home: string): string[] {
+    const paths = readConfig(file)[key];
+    if (paths === undefined) return [];
+    if (!Array.isArray(paths)) {
+        log(`WARNING: ${file}: "${key}" should be an array of directories — ignoring it`);
         return [];
     }
     const dir = path.dirname(file);
-    return themePaths
+    return paths
         .filter((p): p is string => typeof p === 'string')
         .flatMap(p => splitThemePath(p))
         .map(p => path.resolve(dir, expandHome(p, home)));
+}
+
+/** The theme roots one config file contributes, resolved against its own directory. */
+export function themePathsFrom(file: string, home: string = os.homedir()): string[] {
+    return pathsFrom(file, 'themePaths', home);
+}
+
+/** The template roots one config file contributes, resolved against its own directory. */
+export function templatePathsFrom(file: string, home: string = os.homedir()): string[] {
+    return pathsFrom(file, 'templatePaths', home);
 }
 
 /**
@@ -152,8 +167,102 @@ export function discoveredThemeRoots(
     env: NodeJS.ProcessEnv = process.env,
     home: string = os.homedir(),
 ): string[] {
+    return configFiles(fromDir, platform, env, home).flatMap(f => themePathsFrom(f, home));
+}
+
+/** Every config file that applies to `fromDir`, nearest project file first, the user config last. */
+function configFiles(fromDir: string, platform: NodeJS.Platform, env: NodeJS.ProcessEnv, home: string): string[] {
     const files = [...findProjectConfigs(fromDir)];
     const user = userConfigPath(platform, env, home);
     if (user) files.push(user);
-    return files.flatMap(f => themePathsFrom(f, home));
+    return files;
+}
+
+/** Template roots declared by configuration, nearest project file first. */
+export function discoveredTemplateRoots(
+    fromDir: string,
+    platform: NodeJS.Platform = process.platform,
+    env: NodeJS.ProcessEnv = process.env,
+    home: string = os.homedir(),
+): string[] {
+    return configFiles(fromDir, platform, env, home).flatMap(f => templatePathsFrom(f, home));
+}
+
+// ── Frontmatter defaults ──────────────────────────────────────────────────────
+
+/**
+ * Keys a default may not set.
+ *
+ * The revision keys because `--release` and the date stamp rewrite them in the
+ * document itself, and a value that lives in a config file has no line there to
+ * rewrite. `Title` because it names one document. `Mode` and `Export On Save`
+ * because the VS Code extension reads them from the document's own text to
+ * decide whether saving exports it: a default `Mode` would export from the
+ * terminal and silently never on save.
+ */
+export const NOT_DEFAULTABLE = [
+    'Title', 'Document Info', 'Revisions', 'Revision', 'Version', 'Status', 'Date', 'Mode', 'Export On Save',
+] as const;
+
+/** Frontmatter defaults in effect for a document, and which file each key came from. */
+export interface FrontmatterDefaults {
+    values: Record<string, unknown>;
+    /** Key (as written) → the config file it came from, for the log line. */
+    sources: Record<string, string>;
+}
+
+/**
+ * The `frontmatterDefaults` of every config file that applies to `fromDir`,
+ * merged so the nearest file wins per key.
+ *
+ * Keys are compared case-insensitively, as the frontmatter reader compares
+ * them, so `theme` in a nearer file overrides `Theme` in a farther one.
+ * `Variables` is merged per name rather than replaced, so a user config can
+ * hold a company name while a project config adds the customer. A key that may
+ * not be defaulted, or that looks like a misspelling of a real key, warns with
+ * the file named and is ignored.
+ */
+export function discoveredFrontmatterDefaults(
+    fromDir: string,
+    platform: NodeJS.Platform = process.platform,
+    env: NodeJS.ProcessEnv = process.env,
+    home: string = os.homedir(),
+): FrontmatterDefaults {
+    const values: Record<string, unknown> = {};
+    const sources: Record<string, string> = {};
+    const owner = new Map<string, string>();       // lowercased key → key as stored
+
+    // Farthest first, so each nearer file overwrites what it repeats.
+    for (const file of configFiles(fromDir, platform, env, home).reverse()) {
+        const raw = readConfig(file).frontmatterDefaults;
+        if (raw === undefined) continue;
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            log(`WARNING: ${file}: "frontmatterDefaults" should be an object of frontmatter keys — ignoring it`);
+            continue;
+        }
+        for (const warning of unknownKeyWarnings(raw)) log(`${warning.replace(/^WARNING: /, `WARNING: ${file}: `)}`);
+
+        for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+            if (NOT_DEFAULTABLE.some(k => k.toLowerCase() === key.toLowerCase())) {
+                log(`WARNING: ${file}: "${key}" cannot be a frontmatter default — set it in each document. Ignoring it.`);
+                continue;
+            }
+            const lower = key.toLowerCase();
+            const previous = owner.get(lower);
+            if (lower === 'variables' && previous !== undefined && isMapping(values[previous]) && isMapping(value)) {
+                values[previous] = { ...(values[previous] as object), ...(value as object) };
+                sources[previous] = file;
+                continue;
+            }
+            if (previous !== undefined) { delete values[previous]; delete sources[previous]; }
+            values[key] = value;
+            sources[key] = file;
+            owner.set(lower, key);
+        }
+    }
+    return { values, sources };
+}
+
+function isMapping(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
 }

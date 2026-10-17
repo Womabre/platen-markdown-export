@@ -3,7 +3,9 @@
 
 import { findWeasyprint } from './bootstrap';
 import { standaloneCommand } from './commands';
+import { discoveredFrontmatterDefaults, type FrontmatterDefaults } from './projectconfig';
 import * as fs                      from 'fs';
+import frontMatter                  from 'front-matter';
 import * as path                    from 'path';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { version: APP_VERSION } = require('../package.json') as { version: string };
@@ -632,7 +634,11 @@ export async function main(opts: { inWatch?: boolean; argv?: string[] } = {}): P
     // now — and a Revisions row recording a release that never happened would be
     // a lie in the document's own history.
     const bumpRevisions = Boolean(markdownFile) && !noBump && release;
-    const fm = extractFrontmatter(markdownFile, pendingSource?.content);
+    // `frontmatterDefaults` from the config files beside and above the document
+    // fill in what it does not set itself — see projectconfig.ts.
+    const defaults = discoveredFrontmatterDefaults(path.dirname(path.resolve(markdownFile ?? inputFile)));
+    const fm = extractFrontmatter(markdownFile, pendingSource?.content, defaults.values);
+    logDefaultsUsed(defaults, markdownFile, pendingSource?.content);
     // Only what `main()` itself still reads: `logStartupSummary` takes the whole
     // frontmatter, so the fields that existed purely to be printed went with it.
     const { revision, status, theme, style, logo } = fm;
@@ -947,6 +953,27 @@ export async function executeExport(o: ExecuteOptions): Promise<ExportResult> {
  * applies `isReleasedStatus` (so `Vrijgegeven` counts). A caller reading the file
  * itself would have to re-implement all three.
  */
+/**
+ * Says which defaults an export actually used, and from which file.
+ *
+ * A Theme that appears from nowhere is the one confusing thing about defaults,
+ * so the log names its source. Keys the document sets itself are left out: the
+ * default lost and played no part.
+ */
+function logDefaultsUsed(defaults: FrontmatterDefaults, markdownFile: string | null, source?: string): void {
+    if (!markdownFile || !Object.keys(defaults.values).length) return;
+    // A missing document is `validate`'s to report, with exit 3.
+    if (source === undefined && !fs.existsSync(markdownFile)) return;
+    const own = new Set(Object.keys(frontMatter(source ?? fs.readFileSync(markdownFile, 'utf8')).attributes as object)
+        .map(k => k.toLowerCase()));
+    const byFile = new Map<string, string[]>();
+    for (const [key, file] of Object.entries(defaults.sources)) {
+        if (own.has(key.toLowerCase()) && key.toLowerCase() !== 'variables') continue;
+        byFile.set(file, [...(byFile.get(file) ?? []), key]);
+    }
+    for (const [file, keys] of byFile) log(`Frontmatter defaults from ${file}: ${keys.join(', ')}`);
+}
+
 export function describeDocument(fm: FrontmatterData, file: string | null): Record<string, unknown> {
     const last = fm.revisions.at(-1) ?? null;
     return {

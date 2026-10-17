@@ -1,10 +1,12 @@
+import * as path from 'path';
 import * as fs from 'fs';
 import type { ParsedArgs, FrontmatterAnswers } from './types';
 import { listThemes, listThemeEntries, loadTheme, DEFAULT_THEME,
          setThemeRoots, themeRootsFromEnv, splitThemePath } from './theme';
 import { frontmatterTemplate } from './frontmatter';
 import { frontmatterJsonSchema } from './frontmatter-keys';
-import { discoveredThemeRoots } from './projectconfig';
+import { discoveredThemeRoots, discoveredTemplateRoots } from './projectconfig';
+import { listTemplateEntries, resolveTemplate, renderTemplate, templateRootsFromEnv, type TemplateEntry } from './templates';
 import { ExitError } from './errors';
 import { PREVIEW_FORMATS, runPreviewKit, type PreviewFormat } from './preview-kit';
 import { PDF_VARIANTS, INFOGRAPHIC_ICON_PROVIDERS, type InfographicIconProvider } from './config';
@@ -81,6 +83,14 @@ Options:
       --init               Print a starter frontmatter block on stdout and exit.
                            Redirect it into a new document:
                              platen-markdown-export --init > report.md
+      --template <name>    With --init: start from a document template (a body
+                           outline and preset frontmatter) instead of the bare
+                           block. A name from --list-templates, a folder holding
+                           template.md, or a .md file
+      --template-path <dir>  Extra folder of templates, each a subfolder with a
+                           template.md. Repeatable; searched before the built-in
+                           ones, so a template of the same name replaces one
+      --list-templates     Print the available document templates and exit
       --answers <file.json>  With --init: fill the block in from a JSON object
                            instead of the placeholders. Keys mirror the
                            frontmatter (title, author, theme, style, mode, …)
@@ -98,7 +108,7 @@ Options:
                            --theme and EXPORT_THEME baked into it
       --list-themes        Print available brand packages (themes) and exit
       --list-styles        Print the active theme's cover styles and exit
-      --json               With --list-themes / --list-styles / --check-setup:
+      --json               With --list-themes / --list-styles / --list-templates / --check-setup:
                            print JSON instead of the human listing
       --setup              Install WeasyPrint, Playwright Chromium and draw.io if
                            missing, then exit
@@ -112,6 +122,8 @@ Environment variables:
   EXPORT_THEME               Brand package to use (same as --theme; default: default)
   EXPORT_THEME_PATH          Extra theme directories (same as --theme-path), as a
                              PATH-style list
+  EXPORT_TEMPLATE_PATH       Extra template directories (same as --template-path),
+                             as a PATH-style list
   EXPORT_PDF_DPI             Override WeasyPrint DPI (same as --dpi)
   EXPORT_PDF_VARIANT         Default --pdf-variant when the flag is not given
   EXPORT_INFOGRAPHIC_ICONS   Default --infographic-icons when the flag is not given
@@ -138,6 +150,7 @@ Exit codes:
 /** Options that consume the following argument as their value. */
 const VALUE_FLAGS = ['-i', '--input', '-s', '--stylesheet', '-o', '--output', '--theme', '--mode', '--dpi',
                      '--pdf-variant', '--infographic-icons', '--theme-path', '--release-note', '--answers',
+                     '--template', '--template-path',
                      '--preview-kit', '--preview-format'];
 
 interface ArgToken {
@@ -198,6 +211,23 @@ export function applyThemeRoots(
     fromDir: string = process.cwd(),
 ): void {
     setThemeRoots(resolveThemeRoots(peekAll(tokens, '--theme-path'), env, fromDir));
+}
+
+/**
+ * The template roots in effect, in search order: `--template-path`, then
+ * `EXPORT_TEMPLATE_PATH`, then config files walked up from `fromDir`. The
+ * bundled templates are searched after all of them.
+ */
+export function templateRoots(
+    tokens: ArgToken[],
+    env: NodeJS.ProcessEnv = process.env,
+    fromDir: string = process.cwd(),
+): string[] {
+    return [
+        ...peekAll(tokens, '--template-path').flatMap(splitThemePath).map(p => path.resolve(p)),
+        ...templateRootsFromEnv(env),
+        ...discoveredTemplateRoots(fromDir),
+    ];
 }
 
 /**
@@ -269,9 +299,28 @@ function handleImmediateFlags(argv: string[]): void {
     // placeholders. That is what the extension's new-document wizard runs, so
     // there is exactly one implementation of answers → frontmatter rather than a
     // second one in TypeScript that compiles for the editor.
+    // `--template <name>` starts from a document template instead of the bare
+    // scaffold — still printed, still answered by `--answers`.
     if (has('--init')) {
-        const answersFile = peekFlag(tokens, '--answers');
-        throw new ExitError(frontmatterTemplate(undefined, readAnswers(answersFile)), 0);
+        const answers = readAnswers(peekFlag(tokens, '--answers'));
+        const template = peekFlag(tokens, '--template');
+        if (template === null) throw new ExitError(frontmatterTemplate(undefined, answers), 0);
+        // Printed with console.log, which adds the newline the document ends with.
+        const rendered = renderTemplate(resolveTemplate(template, templateRoots(tokens)), undefined, answers);
+        throw new ExitError(rendered.replace(/\n+$/, ''), 0);
+    }
+    if (has('--template'))
+        throw new ExitError('Error: --template only means something with --init\n', 2);
+
+    if (has('--list-templates')) {
+        const entries = listTemplateEntries(templateRoots(tokens));
+        if (has('--json')) throw new ExitError(JSON.stringify(entries, null, 2), 0);
+        const width = Math.max(0, ...entries.map(e => e.name.length));
+        const line = (e: TemplateEntry): string =>
+            `  ${e.name.padEnd(width)}  ${e.description}${e.source === 'external' ? `  — ${path.dirname(e.file)}` : ''}`;
+        throw new ExitError(entries.length
+            ? 'Available templates:\n' + entries.map(line).join('\n')
+            : 'No templates found.', 0);
     }
     if (has('--answers'))
         throw new ExitError('Error: --answers only means something with --init\n', 2);
@@ -443,6 +492,10 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedArgs {
             // Consumed by the pre-pass; accepted here so it is not "unknown".
             case '--init':                  bare(flag, value); break;
             case '--frontmatter-schema':    bare(flag, value); break;
+            case '--list-templates':        bare(flag, value); break;
+            // Consumed by the pre-pass, with --init or --list-templates.
+            case '--template':              required(flag, value); break;
+            case '--template-path':         required(flag, value); break;
 
             default:
                 if (!flag.startsWith('-')) { positional.push(flag); break; }

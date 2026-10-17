@@ -524,6 +524,84 @@ export const MODE_CHOICES: ReadonlyArray<{ label: string; detail: string }> = [
     { label: 'html',      detail: 'Self-contained HTML only' },
 ];
 
+// ── Document templates ────────────────────────────────────────────────────────
+
+/** One template as `--list-templates --json` reports it — the fields the wizard uses. */
+export interface TemplateInfo {
+    name: string;
+    description: string;
+    /** Its Markdown file; the wizard renders by path, so the CLI cannot pick a different one. */
+    file: string;
+    source: 'builtin' | 'external';
+    /** Top-level frontmatter keys the template sets. */
+    sets: string[];
+    theme: string | null;
+}
+
+/**
+ * Parses `--list-templates --json`, returning [] for anything unexpected — an
+ * older CLI refuses the flag, and no templates means the wizard simply does not
+ * ask for a document type.
+ */
+export function parseTemplateList(json: string | null): TemplateInfo[] {
+    let parsed: unknown;
+    try { parsed = JSON.parse(json ?? ''); } catch { return []; }
+    if (!Array.isArray(parsed)) { return []; }
+    return parsed.flatMap((e: unknown): TemplateInfo[] => {
+        const t = e as Partial<TemplateInfo> | null;
+        if (!t || typeof t.name !== 'string' || typeof t.file !== 'string') { return []; }
+        return [{
+            name: t.name,
+            description: typeof t.description === 'string' ? t.description : '',
+            file: t.file,
+            source: t.source === 'external' ? 'external' : 'builtin',
+            sets: Array.isArray(t.sets) ? t.sets.filter((k): k is string => typeof k === 'string') : [],
+            theme: typeof t.theme === 'string' ? t.theme : null,
+        }];
+    });
+}
+
+/** The label of the "no template" choice, which renders the plain scaffold. */
+export const BLANK_TEMPLATE = 'Blank document';
+
+/** The document-type picker: a blank document first, then every template. */
+export function templatePickItems(templates: readonly TemplateInfo[]): Array<{ label: string; description: string; detail?: string }> {
+    return [
+        { label: BLANK_TEMPLATE, description: 'The standard frontmatter, nothing else' },
+        ...templates.map(t => ({
+            label: t.name,
+            description: [t.description, t.source === 'external' ? 'external' : ''].filter(Boolean).join(' · '),
+            detail: t.source === 'external' ? t.file : undefined,
+        })),
+    ];
+}
+
+/** Whether a template already decides `key`, compared as the exporter compares keys. */
+export function templateSets(template: TemplateInfo | null, key: string): boolean {
+    return !!template && template.sets.some(k => k.toLowerCase() === key.toLowerCase());
+}
+
+/**
+ * The wizard's questions for a template: title and author always, and theme,
+ * style and mode only when the template leaves them open. Asking for a theme
+ * the template has already chosen would only invite overriding a choice its
+ * author made on purpose — and the answer would win.
+ */
+export function wizardQuestions(template: TemplateInfo | null): Array<'title' | 'author' | 'theme' | 'style' | 'mode'> {
+    return (['title', 'author', 'theme', 'style', 'mode'] as const)
+        .filter(q => q === 'title' || q === 'author' || !templateSets(template, q));
+}
+
+/**
+ * Splits rendered output into its frontmatter block and the body after it, so
+ * the fill-in wizard can insert only the frontmatter above a document that
+ * already has its own content.
+ */
+export function splitScaffold(text: string): { frontmatter: string; body: string } {
+    const m = /^(﻿?---\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n(?:\r?\n)?)([\s\S]*)$/.exec(text);
+    return m ? { frontmatter: m[1], body: m[2] } : { frontmatter: text, body: '' };
+}
+
 /** A new document: the rendered frontmatter, then the title as its first heading. */
 export function newDocumentContent(frontmatter: string, title: string | undefined): string {
     return title ? `${frontmatter}# ${title}\n\n` : frontmatter;

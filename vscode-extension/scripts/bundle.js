@@ -8,6 +8,7 @@
  * `path.join(__dirname, '..', 'themes')` resolution keeps working):
  *   bundled/dist/            compiled CLI (from ../dist)
  *   bundled/themes/          theme assets, sample*.{md,html,pdf} stripped
+ *   bundled/templates/       built-in document templates
  *   bundled/node_modules/    production deps, multi-platform sharp binaries
  *
  * WeasyPrint (Python + native libs) and the Playwright Chromium download are
@@ -160,11 +161,6 @@ function copyDist() {
 }
 
 /**
- * Copies themes/, excluding the generated sample outputs (sample*.md/.html/.pdf
- * and .DS_Store) — those are dev fixtures, not runtime assets, and the sample
- * *.html files alone can be ~20MB each (inlined fonts/images) across 12 themes.
- */
-/**
  * Copies assets/ — today the infographic hand-drawn font, which
  * infographic-fonts.ts resolves as `__dirname/../assets/fonts`, so it has to sit
  * beside dist/ here exactly as it does in the repo.
@@ -176,6 +172,26 @@ function copyAssets() {
     log('copied assets/');
 }
 
+/**
+ * Copies templates/ — the built-in document templates, which templates.ts
+ * resolves as `__dirname/../templates`. Without it `--list-templates` in the
+ * packaged extension lists nothing and the wizard offers no document types.
+ */
+function copyTemplates() {
+    const src = path.join(ROOT_DIR, 'templates');
+    if (!fs.existsSync(src)) fail('templates/ not found at repo root.');
+    fs.cpSync(src, path.join(BUNDLE_DIR, 'templates'), {
+        recursive: true,
+        filter: (p) => path.basename(p) !== '.DS_Store',
+    });
+    log('copied templates/');
+}
+
+/**
+ * Copies themes/, excluding the generated sample outputs (sample*.md/.html/.pdf
+ * and .DS_Store) — those are dev fixtures, not runtime assets, and the sample
+ * *.html files alone can be ~20MB each (inlined fonts/images) across 12 themes.
+ */
 function copyThemes() {
     const src = path.join(ROOT_DIR, 'themes');
     if (!fs.existsSync(src)) fail('themes/ not found at repo root.');
@@ -550,6 +566,7 @@ function main() {
     copyDist();
     copyThemes();
     copyAssets();
+    copyTemplates();
 
     const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pme-bundle-'));
     try {

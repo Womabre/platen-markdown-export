@@ -391,6 +391,33 @@ export function parseImageSpec(spec: string | null | undefined): { src: string |
 // ── Frontmatter extraction ────────────────────────────────────────────────────
 
 /**
+ * The document's frontmatter with `defaults` filled in under it.
+ *
+ * The document wins per key, compared case-insensitively as the reader does;
+ * `Variables` is merged per name, so a document can add or override one
+ * variable without restating the rest. Nothing here is ever written back: the
+ * source mutations re-read the document's own text.
+ */
+export function withDefaults(attributes: unknown, defaults: Record<string, unknown>): Record<string, unknown> {
+    const doc = attributes && typeof attributes === 'object' && !Array.isArray(attributes)
+        ? attributes as Record<string, unknown> : {};
+    const out: Record<string, unknown> = { ...doc };
+    const docKeys = new Map(Object.keys(doc).map(k => [k.toLowerCase(), k]));
+    for (const [key, value] of Object.entries(defaults)) {
+        const own = docKeys.get(key.toLowerCase());
+        if (own === undefined) { out[key] = value; continue; }
+        const mine = doc[own];
+        if (key.toLowerCase() === 'variables' && isPlainObject(mine) && isPlainObject(value))
+            out[own] = { ...value, ...mine };
+    }
+    return out;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
  * Reads a document's frontmatter.
  *
  * @param source Content to parse instead of reading `markdownFile` from disk.
@@ -398,8 +425,14 @@ export function parseImageSpec(spec: string | null | undefined): { src: string |
  *               not been committed yet — the export must see today's stamped
  *               revision date even though the file is only written once the
  *               export has succeeded.
+ * @param defaults `frontmatterDefaults` from the document's config files;
+ *               see `withDefaults`.
  */
-export function extractFrontmatter(markdownFile: string | null, source?: string): FrontmatterData {
+export function extractFrontmatter(
+    markdownFile: string | null,
+    source?: string,
+    defaults: Record<string, unknown> = {},
+): FrontmatterData {
     const empty: FrontmatterData = {
         title: '', documentInfo: [], revisions: [], revisionsVisible: 3,
         revision: null, status: null, author: null, date: null,
@@ -417,9 +450,11 @@ export function extractFrontmatter(markdownFile: string | null, source?: string)
     if (!markdownFile) return empty;
     if (source === undefined && !fs.existsSync(markdownFile)) return empty;
 
-    const { attributes } = frontMatter(source ?? fs.readFileSync(markdownFile, 'utf8'));
+    const { attributes: own } = frontMatter(source ?? fs.readFileSync(markdownFile, 'utf8'));
     // A misspelled key is read by nobody, so it is reported here or nowhere.
-    for (const warning of unknownKeyWarnings(attributes)) log(warning);
+    // Only the document's own keys: defaults were checked where they were read.
+    for (const warning of unknownKeyWarnings(own)) log(warning);
+    const attributes = withDefaults(own, defaults);
     const at   = reader(attributes);
     const info = (at('Document Info') ?? {}) as Record<string, unknown>;
     const atInfo = reader(info);

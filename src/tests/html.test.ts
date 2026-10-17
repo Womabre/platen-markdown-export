@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { resetWarnings, warningCount } from '../logger';
 import {
     loadHtmlTemplate,
     injectTocWrapper,
@@ -367,6 +368,19 @@ describe('injectTocWrapper', () => {
         const result = injectTocWrapper(html);
         assert.equal(result, html, 'should return unchanged when anchors are not hash links');
         assert.ok(!result.includes('<nav class="toc">'));
+    });
+
+    it('does not warn about an ordinary list in a document with no TOC', () => {
+        resetWarnings();
+        const html = '<h2>Before you start</h2>\n<ul>\n<li>Access rights</li>\n</ul>';
+        assert.equal(injectTocWrapper(html), html);
+        assert.equal(warningCount(), 0);
+    });
+
+    it('still warns when a Contents heading is followed by something that is not a TOC', () => {
+        resetWarnings();
+        injectTocWrapper('<h2>Contents</h2>\n<ul>\n<li>no links</li>\n</ul>');
+        assert.equal(warningCount(), 1);
     });
 
     it('returns unchanged when there is no ul element', () => {

@@ -54,6 +54,9 @@ platen-markdown-export --theme acme document.md             # use the themes/acm
 | `--no-bump`                    | Don't modify the source markdown (skips revision-date update and post-release revision bump) — useful in CI |
 | `--no-revision-bump`           | Skip only the post-release revision bump; the revision date is still stamped                                |
 | `--init`                       | Print a starter frontmatter block on stdout and exit (`--init > report.md`)                                  |
+| `--template <name>`            | With `--init`: start from a document template instead of the bare scaffold — a name, a template folder or a `.md` file ([docs/TEMPLATES.md](docs/TEMPLATES.md)) |
+| `--template-path <dir>`        | Extra folder of templates, searched before the built-in ones (repeatable; also `EXPORT_TEMPLATE_PATH`) |
+| `--list-templates`             | Print the available document templates and exit (`--json` for tooling) |
 | `--dry-run`                    | Validate the document (includes and local images too) and report what it would write, writing nothing        |
 | `--strict`                     | Exit 6 if the run raised any warning (missing image, unresolved include, font that failed to fetch)         |
 | `--theme-path <dir>`           | Extra folder to search for themes, each holding one directory per theme. Repeatable; a value may itself be a `PATH`-style list. An external theme shadows a built-in one of the same name |
@@ -191,6 +194,29 @@ machine-wide default beneath it.
 
 Precedence, highest first: `--theme-path` → `EXPORT_THEME_PATH` → the nearest
 project config, then each one above it → the user config.
+
+## Templates and frontmatter defaults
+
+Start a document from a template for its kind (report, technical design, meeting
+notes, how-to, or your own) instead of a blank scaffold:
+
+```sh
+platen-markdown-export --list-templates
+platen-markdown-export --init --template report > q3-review.md
+```
+
+And give every document in a folder the same branding without repeating it, from
+the same `platen-markdown-export.json` that holds `themePaths`:
+
+```json
+{
+  "templatePaths": ["./templates"],
+  "frontmatterDefaults": { "Theme": "acme", "Style": "Navy", "Classification": "Internal" }
+}
+```
+
+A document's own keys always win over a default. How to write a template, where
+templates are found, and which keys cannot be defaults: **[docs/TEMPLATES.md](docs/TEMPLATES.md)**.
 
 ## Watch mode
 
@@ -377,6 +403,7 @@ Beyond standard markdown-it (tables, typographer, linkify):
 | Variable                                      | Purpose                                                              |
 | --------------------------------------------- | -------------------------------------------------------------------- |
 | `EXPORT_THEME`                                | Brand package to use (same as `--theme`; default `default`)          |
+| `EXPORT_TEMPLATE_PATH`                        | Extra template folders (same as `--template-path`), a `PATH`-style list |
 | `EXPORT_PDF_DPI`                              | WeasyPrint DPI (default 300)                                         |
 | `EXPORT_PDF_VARIANT`                          | Default `--pdf-variant` when the flag is not given (default: none — an ordinary PDF) |
 | `EXPORT_INFOGRAPHIC_ICONS`                    | Default `--infographic-icons` when the flag is not given: `iconify` (default), `weavefox` or `none` |

@@ -37,6 +37,11 @@ for, so the result message offers the install command to copy instead.
   `Platen Markdown Export: Theme Markdown Preview Enhanced in This Workspace` once. See
   *Live preview in your theme* in the main README for what a preview can and
   cannot show.
+- **New documents from a template** — **New Document** and **Frontmatter
+  Wizard** first ask what kind of document it is: a blank document, a built-in
+  template (report, technical design, meeting notes, how-to) or one of your own
+  from `templatePaths`. Questions the template already answers, such as its theme,
+  are skipped. See *docs/TEMPLATES.md* in the main repository.
 - **Frontmatter suggestions** — inside a document's frontmatter, typing a key
   suggests every key the exporter reads (minus the ones already set), with its
   description, and `Key: ` suggests its values: `Classification`, `Orientation`,

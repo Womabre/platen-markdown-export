@@ -8,6 +8,40 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-16
+
+### Added
+
+- **Document templates.** `--init --template report` starts a document from a
+  template for its kind: the frontmatter it needs plus the outline of its
+  sections. Four ship with the tool (`report`, `technical-design`,
+  `meeting-notes`, `how-to`), and `--list-templates` shows them. Your own go in
+  any folder named by `--template-path`, `EXPORT_TEMPLATE_PATH` or `templatePaths`
+  in `platen-markdown-export.json`, and one called `report` replaces the built-in
+  one. A template can preset any key and add its own `Document Info` labels. The
+  title, author, date and revision always belong to the new document, and
+  `{{Title}}`, `{{Author}}` and `{{Date}}` in the body are filled in. See
+  `docs/TEMPLATES.md`.
+- **Frontmatter defaults.** `frontmatterDefaults` in `platen-markdown-export.json`
+  gives every document under that folder the keys it does not set itself, such as
+  the theme, style, classification or a `Customer` variable, so a customer folder
+  brands everything in it. The nearest config wins, the document always wins, and
+  `Variables` merge per name. Nothing is written into the document, and the export
+  log says which file each default came from. `Title`, the revision keys, `Mode`
+  and `Export On Save` cannot be defaults, and are ignored with a warning.
+- **VS Code: the wizards ask for a document type first.** **New Document** and
+  **Frontmatter Wizard** offer a blank document, the built-in templates and your
+  own, and skip the questions a template already answers. Filling in an existing
+  document adds only the template's frontmatter.
+
+### Fixed
+
+- **A document with no table of contents no longer warns about one.** Without a
+  "Contents" heading, the first bullet list in the document was taken for the
+  TOC. When it had no links, the export warned "Could not detect TOC" and
+  `--strict` failed. It now warns only when a Contents heading is followed by
+  something that is not a TOC.
+
 ## [1.2.0] - 2026-10-16
 
 ### Added

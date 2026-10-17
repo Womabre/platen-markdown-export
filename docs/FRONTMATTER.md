@@ -13,6 +13,10 @@ fails the export under `--strict`. Keys that are nowhere near one of ours, such
 as another tool's `tags` or `marp`, are left alone. The keys inside
 `Document Info` and `Variables` are your own labels and are never checked.
 
+Keys a document leaves out can come from `frontmatterDefaults` in a
+`platen-markdown-export.json` beside or above it; see
+[TEMPLATES.md](TEMPLATES.md#frontmatter-defaults).
+
 The full key list is also available as a JSON Schema:
 `platen-markdown-export --frontmatter-schema`, or `schema/frontmatter.schema.json`
 in the package.

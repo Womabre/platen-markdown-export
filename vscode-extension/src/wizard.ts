@@ -6,6 +6,7 @@ import {
     hasFrontmatter, MARKDOWN_ONLY_EXT, themePathArgs, type ExportSettings, type ThemeEntry,
     applyWizardFeatures, suggestFileName, validateTitle, WIZARD_FEATURES, type WizardAnswers,
     themePickItems, themeAnswer, parseStyleList, MODE_CHOICES, newDocumentContent,
+    parseTemplateList, templatePickItems, wizardQuestions, splitScaffold, type TemplateInfo,
 } from './core';
 
 /**
@@ -39,9 +40,6 @@ export interface WizardHost {
     queryCli(command: string, args: string[], cwd?: string): Promise<string | null>;
 }
 
-/** How many questions are numbered. The feature pick is optional and unnumbered. */
-const STEP_COUNT = 5;
-
 /** The CLI plus the file the wizard anchors its resolution to, or null after reporting why not. */
 async function wizardContext(
     host: WizardHost,
@@ -62,19 +60,48 @@ async function wizardContext(
     return { cli, anchor };
 }
 
+/** What the wizard collected: the answers, and the template they fill in (null for a blank document). */
+interface Collected { answers: WizardAnswers; template: TemplateInfo | null }
+
+/** The folder a CLI query should run in, so project config beside the work is found. */
+function anchorDir(anchor: vscode.Uri): string {
+    try { return fs.statSync(anchor.fsPath).isDirectory() ? anchor.fsPath : path.dirname(anchor.fsPath); }
+    catch { return path.dirname(anchor.fsPath); }
+}
+
 /**
  * The wizard's questions, shared by both commands that ask them.
  *
  * Returns undefined the moment a step is cancelled, so a caller writes nothing.
  * Split out because the questions are the feature — creating a file and filling
  * in a document you already have open differ only in what happens to the answers,
- * and a second copy of five prompts is a second place for them to drift.
+ * and a second copy of the prompts is a second place for them to drift.
+ *
+ * The document type comes first, when the CLI offers any templates, because it
+ * decides which questions follow: a template that has chosen its theme is not
+ * asked about one.
  */
-async function collectAnswers(host: WizardHost, cli: WizardCli, anchor: vscode.Uri): Promise<WizardAnswers | undefined> {
-    const step = (n: number, label: string): string => `${label} (${n}/${STEP_COUNT})`;
+async function collectAnswers(host: WizardHost, cli: WizardCli, anchor: vscode.Uri): Promise<Collected | undefined> {
+    const cwd = anchorDir(anchor);
+    const cliArgs = (...extra: string[]): string[] => [
+        ...cli.baseArgs, ...themePathArgs(host.readSettings().themePaths), ...extra,
+    ];
+
+    let template: TemplateInfo | null = null;
+    const templates = parseTemplateList(await host.queryCli(cli.command, cliArgs('--list-templates', '--json'), cwd));
+    if (templates.length) {
+        const pick = await vscode.window.showQuickPick(templatePickItems(templates),
+            { title: 'Document type', placeHolder: 'What kind of document is this?' });
+        if (!pick) { return; }
+        template = templates.find(t => t.name === pick.label) ?? null;
+    }
+
+    const questions = wizardQuestions(template);
+    const step = (q: typeof questions[number], label: string): string =>
+        `${label} (${questions.indexOf(q) + 1}/${questions.length})`;
 
     const title = await vscode.window.showInputBox({
-        title: step(1, 'Frontmatter: title'),
+        title: step('title', 'Frontmatter: title'),
         prompt: 'Text after " — " or ": " becomes the cover subtitle',
         placeHolder: 'Q3 Report — Operations',
         validateInput: (v) => validateTitle(v) ?? undefined,
@@ -82,59 +109,64 @@ async function collectAnswers(host: WizardHost, cli: WizardCli, anchor: vscode.U
     if (title === undefined) { return; }
 
     const author = await vscode.window.showInputBox({
-        title: step(2, 'Frontmatter: author'),
+        title: step('author', 'Frontmatter: author'),
         prompt: 'Shown on the cover and carried into the revisions table',
         value: host.readSettings().defaultAuthor ?? '',
     });
     if (author === undefined) { return; }
 
-    // The live list, so an external theme registered a minute ago is offered.
-    const themes = await host.listThemes(anchor);
-    const themePick = await vscode.window.showQuickPick(themePickItems(themes),
-        { title: step(3, 'Frontmatter: theme'), placeHolder: 'Brand package' });
-    if (!themePick) { return; }
-
-    // Styles belong to the chosen theme, so this is asked after it and answered
-    // by the CLI rather than from a list the editor would have to keep current.
-    const styles = parseStyleList(await host.queryCli(cli.command, [
-        ...cli.baseArgs, ...themePathArgs(host.readSettings().themePaths),
-        '--theme', themePick.label, '--list-styles', '--json',
-    ]));
-
-    let style: string | undefined;
-    if (styles.length) {
-        const stylePick = await vscode.window.showQuickPick(styles, {
-            title: step(4, 'Frontmatter: cover style'),
-            placeHolder: `Cover style in "${themePick.label}"`,
-        });
-        if (!stylePick) { return; }
-        style = stylePick;
+    let theme: string | undefined;
+    let themeForStyles = template?.theme ?? undefined;
+    if (questions.includes('theme')) {
+        // The live list, so an external theme registered a minute ago is offered.
+        const themes = await host.listThemes(anchor);
+        const themePick = await vscode.window.showQuickPick(themePickItems(themes),
+            { title: step('theme', 'Frontmatter: theme'), placeHolder: 'Brand package' });
+        if (!themePick) { return; }
+        theme = themeAnswer(themes, themePick.label);
+        themeForStyles = themePick.label;
     }
 
-    const modePick = await vscode.window.showQuickPick([...MODE_CHOICES],
-        { title: step(5, 'Frontmatter: export mode'), placeHolder: 'What an export produces' });
-    if (!modePick) { return; }
+    let style: string | undefined;
+    if (questions.includes('style')) {
+        // Styles belong to the chosen theme, so this is asked after it and answered
+        // by the CLI rather than from a list the editor would have to keep current.
+        const styles = parseStyleList(await host.queryCli(cli.command,
+            cliArgs(...(themeForStyles ? ['--theme', themeForStyles] : []), '--list-styles', '--json'), cwd));
+        if (styles.length) {
+            const stylePick = await vscode.window.showQuickPick(styles, {
+                title: step('style', 'Frontmatter: cover style'),
+                placeHolder: `Cover style in "${themeForStyles ?? 'default'}"`,
+            });
+            if (!stylePick) { return; }
+            style = stylePick;
+        }
+    }
+
+    let mode: string | undefined;
+    if (questions.includes('mode')) {
+        const modePick = await vscode.window.showQuickPick([...MODE_CHOICES],
+            { title: step('mode', 'Frontmatter: export mode'), placeHolder: 'What an export produces' });
+        if (!modePick) { return; }
+        mode = modePick.label;
+    }
 
     // Optional, and skippable with Escape — every one of these has a sane
     // default of "off", so an empty pick is a complete answer rather than an
-    // abandoned wizard.
+    // abandoned wizard. A template may already switch some on; picking one
+    // here only ever adds.
     const featurePicks = await vscode.window.showQuickPick(
         WIZARD_FEATURES.map(f => ({ label: f.label, detail: f.detail })),
         { title: 'Optional document controls', placeHolder: 'Pick any; none is fine', canPickMany: true },
     );
 
-    const answers: WizardAnswers = {
-        title: title.trim(),
-        author: author.trim() || undefined,
-        theme: themeAnswer(themes, themePick.label),
-        style,
-        mode: modePick.label,
-    };
-    return applyWizardFeatures(answers, (featurePicks ?? []).map(p => p.label));
+    const answers: WizardAnswers = { title: title.trim(), author: author.trim() || undefined, theme, style, mode };
+    return { answers: applyWizardFeatures(answers, (featurePicks ?? []).map(p => p.label)), template };
 }
 
 /**
- * Renders answers into a frontmatter block via the CLI's own `--init --answers`.
+ * Renders answers into a frontmatter block via the CLI's own `--init --answers`
+ * — with `--template`, a whole document: the template's frontmatter and body.
  *
  * The answers go through a temp FILE rather than the command line: a title and
  * an author are free text a person types, and putting that through argv quoting
@@ -143,13 +175,16 @@ async function collectAnswers(host: WizardHost, cli: WizardCli, anchor: vscode.U
  * Returns null after reporting the failure, so callers stop rather than writing
  * an empty document.
  */
-async function renderFrontmatter(host: WizardHost, cli: WizardCli, answers: WizardAnswers): Promise<string | null> {
+async function renderFrontmatter(host: WizardHost, cli: WizardCli, collected: Collected): Promise<string | null> {
     const answersFile = path.join(os.tmpdir(), `pmex-answers-${process.pid}-${Date.now()}.json`);
     try {
-        fs.writeFileSync(answersFile, JSON.stringify(answers), 'utf8');
+        fs.writeFileSync(answersFile, JSON.stringify(collected.answers), 'utf8');
+        // By file, not by name: the name was listed from one folder's config,
+        // and the file is the template the person actually picked.
         const out = await host.queryCli(cli.command, [
             ...cli.baseArgs, ...themePathArgs(host.readSettings().themePaths),
             '--init', '--answers', answersFile,
+            ...(collected.template ? ['--template', collected.template.file] : []),
         ]);
         if (out === null) {
             vscode.window.showErrorMessage(
@@ -203,11 +238,14 @@ export async function frontmatterWizard(host: WizardHost, uri?: vscode.Uri): Pro
     const ctx = await wizardContext(host, target);
     if (!ctx) { return; }
 
-    const answers = await collectAnswers(host, ctx.cli, ctx.anchor);
-    if (!answers) { return; }
+    const collected = await collectAnswers(host, ctx.cli, ctx.anchor);
+    if (!collected) { return; }
 
-    const frontmatter = await renderFrontmatter(host, ctx.cli, answers);
-    if (frontmatter === null) { return; }
+    const rendered = await renderFrontmatter(host, ctx.cli, collected);
+    if (rendered === null) { return; }
+    // The document already has its content, so a template contributes its
+    // frontmatter only, never its outline.
+    const frontmatter = splitScaffold(rendered).frontmatter;
 
     // Into the buffer rather than onto disk, so it lands in the undo stack —
     // the same choice `insertFrontmatter` makes.
@@ -224,8 +262,9 @@ export async function newDocument(host: WizardHost): Promise<void> {
     const ctx = await wizardContext(host);
     if (!ctx) { return; }
 
-    const answers = await collectAnswers(host, ctx.cli, ctx.anchor);
-    if (!answers) { return; }
+    const collected = await collectAnswers(host, ctx.cli, ctx.anchor);
+    if (!collected) { return; }
+    const { answers } = collected;
 
     const suggested = suggestFileName(answers.title) ?? 'document.md';
     const defaultDir = vscode.workspace.workspaceFolders?.[0]?.uri
@@ -237,11 +276,13 @@ export async function newDocument(host: WizardHost): Promise<void> {
     });
     if (!destination) { return; }
 
-    const frontmatter = await renderFrontmatter(host, ctx.cli, answers);
-    if (frontmatter === null) { return; }
+    const rendered = await renderFrontmatter(host, ctx.cli, collected);
+    if (rendered === null) { return; }
+    // A template brings its own body, title heading included.
+    const content = collected.template ? rendered : newDocumentContent(rendered, answers.title);
 
     try {
-        fs.writeFileSync(destination.fsPath, newDocumentContent(frontmatter, answers.title), 'utf8');
+        fs.writeFileSync(destination.fsPath, content, 'utf8');
     } catch (err: unknown) {
         vscode.window.showErrorMessage(
             `Platen Markdown Export: could not write "${path.basename(destination.fsPath)}": ` +

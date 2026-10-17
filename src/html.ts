@@ -135,7 +135,10 @@ export function injectTocWrapper(htmlContent: string): string {
     const allAnchors = [...ulContent.matchAll(/<a\s+href="([^"]+)"/g)];
 
     if (allAnchors.length === 0 || !allAnchors.every(m => m[1].startsWith('#'))) {
-        log('WARNING: Could not detect TOC — skipping wrapper injection');
+        // Only a problem when the document said it has a TOC. Without a Contents
+        // heading this is just the document's first bullet list, and a document
+        // with no TOC at all used to warn — failing --strict — for having one.
+        if (headingMatch) log('WARNING: Could not detect TOC — skipping wrapper injection');
         return htmlContent;
     }
 
