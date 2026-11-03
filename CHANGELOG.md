@@ -8,6 +8,20 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Themes can bring their own document templates.** A `templates/` folder next
+  to a theme's `theme.json` is searched after `templatePaths` and before the
+  built-in templates, so registering the theme (`--theme-path`, `themePaths`, or
+  the VS Code setting) is all it takes for **New Document** and
+  `--list-templates` to offer them.
+
+### Fixed
+
+- The test suite no longer reads the developer's own user config, which added
+  template roots and failed the template listing test on any machine that had
+  one.
+
 ### Security
 
 - **markdown-it 15.0.1 → 15.0.3.** Fixes three quadratic-time denial-of-service

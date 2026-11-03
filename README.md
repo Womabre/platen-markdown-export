@@ -198,7 +198,8 @@ project config, then each one above it → the user config.
 ## Templates and frontmatter defaults
 
 Start a document from a template for its kind (report, technical design, meeting
-notes, how-to, or your own) instead of a blank scaffold:
+notes, how-to, your own, or one a theme brings in its `templates/` folder)
+instead of a blank scaffold:
 
 ```sh
 platen-markdown-export --list-templates

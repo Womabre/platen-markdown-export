@@ -6,9 +6,10 @@ import * as path from 'path';
 import frontMatter from 'front-matter';
 import {
     TEMPLATES_DIR, listTemplateEntries, resolveTemplate, renderTemplate, splitBlocks, templateRootsFromEnv,
+    themeTemplateRoots,
 } from '../templates';
 import { unknownKeyWarnings } from '../frontmatter-keys';
-import { loadTheme } from '../theme';
+import { loadTheme, setThemeRoots, type ThemeEntry } from '../theme';
 import { parseArgs } from '../cli';
 import { main } from '../index';
 import { ExitError } from '../errors';
@@ -180,6 +181,19 @@ describe('listTemplateEntries / resolveTemplate', () => {
             [path.resolve('/a'), path.resolve('/b')]);
         assert.deepEqual(templateRootsFromEnv({}), []);
     });
+
+    it("finds a theme's templates/ folder, and none for a theme another one shadows", () => {
+        const ours = path.join(template('themes-a/acme/templates', 'offer', '# x\n'), '..');
+        const shadowed = path.join(template('themes-b/acme/templates', 'memo', '# x\n'), '..');
+        const bare = path.join(root, 'themes-c', 'plain');
+        fs.mkdirSync(bare, { recursive: true });
+        const entry = (dir: string, name: string): ThemeEntry =>
+            ({ name, displayName: name, dir, source: 'external', root: path.dirname(dir) });
+
+        assert.deepEqual(
+            themeTemplateRoots([entry(ours, 'acme'), entry(bare, 'plain'), entry(shadowed, 'ACME')]),
+            [path.join(ours, 'templates')]);
+    });
 });
 
 // ── CLI ───────────────────────────────────────────────────────────────────────
@@ -213,6 +227,26 @@ describe('CLI template flags', () => {
         const ext = template('flag', 'custom-one', '# x\n', 'Custom');
         const err = run(['--list-templates', '--json', '--template-path', ext]);
         assert.ok((JSON.parse(err.message) as Array<{ name: string }>).some(e => e.name === 'custom-one'));
+    });
+
+    it("--theme-path brings the theme's own templates, ahead of the built-ins", () => {
+        const themes = path.join(root, 'theme-root');
+        fs.mkdirSync(path.join(themes, 'brand'), { recursive: true });
+        fs.writeFileSync(path.join(themes, 'brand', 'theme.json'), JSON.stringify({ name: 'Brand' }));
+        template('theme-root/brand/templates', 'report', '---\nTheme: brand\n---\n# {{Title}}\n', 'Brand report');
+        try {
+            const entries = JSON.parse(run(['--list-templates', '--json', '--theme-path', themes]).message) as
+                Array<{ name: string; description: string; source: string }>;
+            const report = entries.filter(e => e.name === 'report');
+            assert.equal(report.length, 1);
+            assert.equal(report[0].description, 'Brand report');
+            assert.equal(report[0].source, 'external');
+
+            const doc = run(['--init', '--template', 'report', '--theme-path', themes]).message;
+            assert.equal(yamlOf(doc)['Theme'], 'brand');
+        } finally {
+            setThemeRoots([]);
+        }
     });
 });
 

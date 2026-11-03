@@ -4,7 +4,7 @@ import frontMatter from 'front-matter';
 import { ExitError } from './errors';
 import { log } from './logger';
 import { frontmatterTemplate } from './frontmatter';
-import { splitThemePath } from './theme';
+import { listThemeEntries, splitThemePath, type ThemeEntry } from './theme';
 import { closestMatch } from './strings';
 import type { FrontmatterAnswers } from './types';
 
@@ -24,9 +24,9 @@ import type { FrontmatterAnswers } from './types';
  *
  * Templates are found the way themes are: `--template-path`, then
  * `EXPORT_TEMPLATE_PATH`, then `templatePaths` in the project and user config
- * files, then the ones that ship in `templates/`. An external template shadows
- * a built-in one of the same name, which is how an organisation replaces
- * `report` with its own.
+ * files, then the `templates/` folder of every discoverable theme, then the ones
+ * that ship in `templates/`. An external template shadows a built-in one of the
+ * same name, which is how an organisation replaces `report` with its own.
  */
 
 /** The bundled templates, beside `themes/` in the package. */
@@ -55,6 +55,31 @@ export interface TemplateEntry {
 export function templateRootsFromEnv(env: NodeJS.ProcessEnv = process.env): string[] {
     const raw = env[TEMPLATE_PATH_ENV];
     return raw ? splitThemePath(raw).map(p => path.resolve(p)) : [];
+}
+
+/** The folder inside a theme that holds the templates it brings along. */
+export const THEME_TEMPLATES_DIR = 'templates';
+
+/**
+ * The `templates/` folder of every discoverable theme that has one, in theme
+ * resolution order.
+ *
+ * A brand package is where a company's look lives, so it is also where that
+ * company's document types belong: registering the theme is then all it takes
+ * to be offered them. A theme shadowed by another of the same name brings none,
+ * so the templates on offer are those of the theme a document would get.
+ */
+export function themeTemplateRoots(themes: readonly ThemeEntry[] = listThemeEntries()): string[] {
+    const seen = new Set<string>();
+    const roots: string[] = [];
+    for (const theme of themes) {
+        const key = theme.name.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const dir = path.join(theme.dir, THEME_TEMPLATES_DIR);
+        try { if (fs.statSync(dir).isDirectory()) roots.push(dir); } catch { /* the theme brings no templates */ }
+    }
+    return roots;
 }
 
 /**

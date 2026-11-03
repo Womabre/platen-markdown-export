@@ -64,11 +64,19 @@ if (files.length === 0) {
 const passthrough = process.argv.slice(2).filter(a => a !== '--coverage');
 const coverage    = process.argv.includes('--coverage') ? COVERAGE_FLAGS : [];
 
+// The developer's own user config (~/.config/platen-markdown-export/config.json)
+// adds theme and template roots to every run, so a machine with one saw a
+// different template list than the tests expect. Point the lookup at an empty
+// folder instead. APPDATA, its Windows counterpart, is left alone: WeasyPrint
+// discovery on Windows reads it too.
+const emptyConfigHome = fs.mkdtempSync(path.join(require('os').tmpdir(), 'pme-config-'));
+
 const result = spawnSync(
     process.execPath,
     ['--test', ...coverage, ...passthrough, ...files],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', env: { ...process.env, XDG_CONFIG_HOME: emptyConfigHome } },
 );
+fs.rmSync(emptyConfigHome, { recursive: true, force: true });
 
 if (result.error) {
     console.error(`run-tests: could not start Node — ${result.error.message}`);

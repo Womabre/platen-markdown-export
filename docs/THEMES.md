@@ -26,6 +26,10 @@ frontmatter / `EXPORT_THEME` env var) at any built-in name, folder, or
 self-contained (its own CSS, HTML templates and logos), so it's a good starting
 point to copy and tweak.
 
+A theme may also carry document templates in a `templates/` folder, which are
+offered wherever the theme is found — see
+[Templates that come with a theme](TEMPLATES.md#templates-that-come-with-a-theme).
+
 A theme is described by a declarative `theme.json` manifest (all paths are
 relative to the theme directory):
 

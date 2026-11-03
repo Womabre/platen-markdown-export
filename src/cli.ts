@@ -6,7 +6,8 @@ import { listThemes, listThemeEntries, loadTheme, DEFAULT_THEME,
 import { frontmatterTemplate } from './frontmatter';
 import { frontmatterJsonSchema } from './frontmatter-keys';
 import { discoveredThemeRoots, discoveredTemplateRoots } from './projectconfig';
-import { listTemplateEntries, resolveTemplate, renderTemplate, templateRootsFromEnv, type TemplateEntry } from './templates';
+import { listTemplateEntries, resolveTemplate, renderTemplate, templateRootsFromEnv, themeTemplateRoots,
+         type TemplateEntry } from './templates';
 import { ExitError } from './errors';
 import { PREVIEW_FORMATS, runPreviewKit, type PreviewFormat } from './preview-kit';
 import { PDF_VARIANTS, INFOGRAPHIC_ICON_PROVIDERS, type InfographicIconProvider } from './config';
@@ -215,8 +216,9 @@ export function applyThemeRoots(
 
 /**
  * The template roots in effect, in search order: `--template-path`, then
- * `EXPORT_TEMPLATE_PATH`, then config files walked up from `fromDir`. The
- * bundled templates are searched after all of them.
+ * `EXPORT_TEMPLATE_PATH`, then config files walked up from `fromDir`, then the
+ * `templates/` folder of every discoverable theme — which is why the theme roots
+ * must be applied first. The bundled templates are searched after all of them.
  */
 export function templateRoots(
     tokens: ArgToken[],
@@ -227,6 +229,7 @@ export function templateRoots(
         ...peekAll(tokens, '--template-path').flatMap(splitThemePath).map(p => path.resolve(p)),
         ...templateRootsFromEnv(env),
         ...discoveredTemplateRoots(fromDir),
+        ...themeTemplateRoots(),
     ];
 }
 

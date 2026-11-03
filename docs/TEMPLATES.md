@@ -89,7 +89,9 @@ In order, so the first one with a given name wins:
 2. `EXPORT_TEMPLATE_PATH`, a `PATH`-style list
 3. `templatePaths` in `platen-markdown-export.json`, walked up from the working
    directory, then the user config
-4. the built-in `templates/`
+4. the `templates/` folder of every theme Platen can find (`--theme-path`,
+   `EXPORT_THEME_PATH`, `themePaths`, the built-in themes)
+5. the built-in `templates/`
 
 ```json
 { "templatePaths": ["./templates"] }
@@ -97,6 +99,26 @@ In order, so the first one with a given name wins:
 
 A template called `report` in your own folder replaces the built-in `report`.
 `--template` also takes a path: a template folder, or a single `.md` file.
+
+### Templates that come with a theme
+
+A theme can bring its own document types. Put them in a `templates/` folder next
+to its `theme.json`, one folder per template as above:
+
+```text
+acme-theme/
+  theme.json
+  templates/
+    offer/
+      template.md      Theme: acme
+      template.json
+```
+
+Registering the theme is then all it takes: the VS Code **New Document** wizard
+and `--list-templates` offer its templates beside the built-in ones, with no
+`templatePaths` to set. A theme's template does not pick that theme by itself,
+so give its `template.md` a `Theme:` key. When two themes share a name, only the
+templates of the one that wins are offered.
 
 ## Frontmatter defaults
 
