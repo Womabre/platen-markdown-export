@@ -128,6 +128,8 @@ export interface StyleConfig {
     image?: string;
     position?: number;
     gradient: string | null;
+    /** The manifest's literal `gradient`, if any — re-tinted, not replaced, under a document hero image. */
+    ownGradient?: string;
     mainColor: string | null;
     /** Resolved palette key this style draws from (for image-overlay gradients). */
     palette?: string;

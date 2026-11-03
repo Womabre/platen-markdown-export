@@ -601,6 +601,24 @@ describe('style resolution (active theme)', () => {
         );
     });
 
+    it('a style name written as Color points the author at Name', () => {
+        assert.throws(
+            () => resolveStyle({ color: 'duotone', image: 'hero.jpg', position: null }),
+            /"duotone" is a style, not a palette — write `Name: Duotone`/,
+        );
+    });
+
+    it('a { Name, Image } style keeps its own multi-colour gradient, re-tinted for the photo', () => {
+        const r = resolveStyle({ name: 'Duotone', image: 'hero.jpg', color: null, position: null });
+        assert.equal(r.imageSource, 'hero.jpg');
+        assert.equal(r.gradient, `linear-gradient(150deg, ${alpha('#112233', 0.8)} 0%, ${alpha('#aa0044', 0.8)} 90%)`);
+        const ranged = resolveStyle({ name: 'Duotone', image: 'hero.jpg', color: null, position: null, overlay: [0.3, 0.9] as [number, number] });
+        assert.equal(ranged.gradient, `linear-gradient(150deg, ${alpha('#112233', 0.3)} 0%, ${alpha('#aa0044', 0.9)} 90%)`);
+        // Without a photo the manifest gradient is used exactly as written.
+        assert.equal(resolveStyle({ name: 'Duotone', image: null, color: null, position: null }).gradient,
+            'linear-gradient(150deg, #112233 0%, #aa0044 90%)');
+    });
+
     it('resolveStyleMainColor: named style → the palette\'s document colour', () => {
         // Derived from the manifest, not hardcoded, so an intentional palette
         // change here doesn't look like a logic regression.

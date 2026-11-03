@@ -49,6 +49,7 @@
         "none":     { "palette": "Brand", "overlay": [1, 1] },
         "Hero":     { "image": "hero/photo.png", "position": 0.3, "palette": "Brand", "overlay": [0.7, 1] },
         "Borrowed": { "palette": "Brand", "overlay": [0.6, 1] },
-        "Muted":    { "palette": "Muted", "overlay": [0.6, 1] }
+        "Muted":    { "palette": "Muted", "overlay": [0.6, 1] },
+        "Duotone":  { "palette": "Brand", "gradient": "linear-gradient(150deg, #112233 0%, #aa0044 90%)" }
     }
 }

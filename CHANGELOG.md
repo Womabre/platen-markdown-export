@@ -8,6 +8,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Style: { Name, Image }` keeps a style's own gradient.** A theme style that
+  sets a `gradient` of its own, such as one running between two brand colours,
+  lost it as soon as a document added a cover photo: the wash was rebuilt from
+  the palette's single main colour. Each colour in the style's gradient now
+  keeps its hue over the photo and takes the overlay opacity in order, from the
+  first stop to the last.
+- Writing a style name under `Style.Color` now says which key to use (`Name:`)
+  instead of only reporting an unknown colour name.
+
 ## [1.3.1] - 2026-10-17
 
 ### Fixed

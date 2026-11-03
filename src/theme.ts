@@ -234,6 +234,24 @@ function buildGradient(main: string, [start, end]: [number, number]): string {
     return `linear-gradient(150deg, ${alpha(main, start)} 0%, ${alpha(main, end)} 90%)`;
 }
 
+const GRADIENT_COLOR = /#[0-9a-f]{3,8}\b|rgba?\([^)]*\)/gi;
+
+/**
+ * Re-tints a style's own gradient for a cover photo: each colour stop takes an
+ * opacity spread evenly from `start` (first stop) to `end` (last). A style whose
+ * gradient runs between two brand colours keeps both over the photo, where
+ * `buildGradient` would collapse it to the palette's single main colour. Stops
+ * that already carry alpha are left alone, as `alpha()` always does.
+ */
+function overlayGradient(gradient: string, [start, end]: [number, number]): string {
+    const count = gradient.match(GRADIENT_COLOR)?.length ?? 0;
+    let i = 0;
+    return gradient.replace(GRADIENT_COLOR, c => {
+        const t = count > 1 ? i++ / (count - 1) : 0;
+        return alpha(c, start + (end - start) * t);
+    });
+}
+
 // ── Palette roles ─────────────────────────────────────────────────────────────
 
 /**
@@ -294,6 +312,7 @@ function resolveStyleEntry(
         image,
         position: entry.position,
         gradient,
+        ownGradient: entry.gradient,
         mainColor,
         palette: entry.palette ?? defaultPalette,
         fontFamily: entry.fontFamily,
@@ -744,14 +763,17 @@ export function resolveStyle(style: string | StyleFrontmatter): ResolvedStyle {
     const defaultOverlay: [number, number] = hasImage ? [0.8, 0.8] : [1, 1];
     const overlay: [number, number] = style.overlay ?? defaultOverlay;
 
-    // Object form with an explicit named style: take the named style's palette
-    // main colour and the document's own image/position/overlay.
+    // Object form with an explicit named style: take the named style's colours
+    // (its own gradient if the manifest gives one, else its palette main colour)
+    // and the document's own image/position/overlay.
     const named = namedStyleConfig(style);
     if (named) {
         const pMain = activeRoleColor(named.palette, 'main');
-        const gradient = (hasImage && pMain)
-            ? buildGradient(pMain, overlay)
-            : named.gradient ?? null;
+        const gradient = !hasImage
+            ? named.gradient ?? null
+            : named.ownGradient
+                ? overlayGradient(named.ownGradient, overlay)
+                : pMain ? buildGradient(pMain, overlay) : named.gradient ?? null;
         return {
             imageSource: imageSource ?? named.image ?? null,
             position:    explicitPosition ?? (hasImage ? inlinePosition : named.position ?? 0.5),
@@ -766,7 +788,12 @@ export function resolveStyle(style: string | StyleFrontmatter): ResolvedStyle {
         } else {
             const paletteKey = findPaletteKey(color);
             const palette = paletteKey ? theme.palettes[paletteKey] : undefined;
-            if (!palette) throw new Error(`Unknown style colour name: "${color}"`);
+            if (!palette) {
+                const styleKey = findStyleKey(color);
+                throw new Error(styleKey
+                    ? `Unknown style colour name: "${color}" is a style, not a palette — write \`Name: ${styleKey}\` instead of \`Color:\``
+                    : `Unknown style colour name: "${color}"`);
+            }
             const pMain = activeRoleColor(paletteKey, 'main') ?? palette.main;
             gradient = buildGradient(pMain, overlay);
         }
