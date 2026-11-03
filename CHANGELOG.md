@@ -8,6 +8,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-11-03
+
 ### Fixed
 
 - **`Style: { Name, Image }` keeps a style's own gradient.** A theme style that
@@ -1350,7 +1352,11 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First tagged release.
 
-[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/Womabre/platen-markdown-export/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.3.2
+[1.3.1]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.3.1
+[1.3.0]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.3.0
+[1.2.0]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.2.0
 [1.1.3]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.1.3
 [1.1.2]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.1.2
 [1.1.1]: https://github.com/Womabre/platen-markdown-export/releases/tag/v1.1.1
