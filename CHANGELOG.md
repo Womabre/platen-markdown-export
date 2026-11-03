@@ -8,6 +8,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- **markdown-it 15.0.1 → 15.0.3.** Fixes three quadratic-time denial-of-service
+  advisories (GHSA-r7fv-28h4-cvq7, GHSA-vfgh-jcmw-g37q, GHSA-gfr2-rv44-r23c) that
+  failed CI's `npm audit --audit-level=high`.
+
 ## [1.3.2] - 2026-11-03
 
 ### Fixed
