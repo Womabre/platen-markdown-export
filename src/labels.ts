@@ -15,6 +15,8 @@ export interface DocumentLabels {
     /** Headings of the optional caption indexes. */
     listOfTables:  string;
     listOfFigures: string;
+    /** Word before the page number of a `{.page-ref}` link: "(<pageRef> 12)". */
+    pageRef: string;
 }
 
 const LABELS: Record<string, DocumentLabels> = {
@@ -22,26 +24,31 @@ const LABELS: Record<string, DocumentLabels> = {
         glossaryHeading: 'Abbreviations', glossaryAbbr: 'Abbreviation', glossaryDef: 'Description',
         table: 'Table', figure: 'Figure',
         listOfTables: 'List of Tables', listOfFigures: 'List of Figures',
+        pageRef: 'page',
     },
     nl: {
         glossaryHeading: 'Afkortingen', glossaryAbbr: 'Afkorting', glossaryDef: 'Omschrijving',
         table: 'Tabel', figure: 'Figuur',
         listOfTables: 'Lijst van tabellen', listOfFigures: 'Lijst van figuren',
+        pageRef: 'blz.',
     },
     de: {
         glossaryHeading: 'Abkürzungen', glossaryAbbr: 'Abkürzung', glossaryDef: 'Beschreibung',
         table: 'Tabelle', figure: 'Abbildung',
         listOfTables: 'Tabellenverzeichnis', listOfFigures: 'Abbildungsverzeichnis',
+        pageRef: 'S.',
     },
     fr: {
         glossaryHeading: 'Abréviations', glossaryAbbr: 'Abréviation', glossaryDef: 'Description',
         table: 'Tableau', figure: 'Figure',
         listOfTables: 'Liste des tableaux', listOfFigures: 'Liste des figures',
+        pageRef: 'p.',
     },
     es: {
         glossaryHeading: 'Abreviaturas', glossaryAbbr: 'Abreviatura', glossaryDef: 'Descripción',
         table: 'Tabla', figure: 'Figura',
         listOfTables: 'Índice de tablas', listOfFigures: 'Índice de figuras',
+        pageRef: 'pág.',
     },
 };
 

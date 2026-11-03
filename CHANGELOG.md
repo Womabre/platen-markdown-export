@@ -8,6 +8,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-03
+
+### Changed
+
+- **Page references follow the document language.** The text after a
+  `{.page-ref}` link now comes from `Lang`, so a Dutch document prints
+  "(blz. 12)" instead of "(page 12)" (`de` "S.", `fr` "p.", `es` "pág.",
+  English otherwise). The exporter writes the wording after the theme
+  stylesheet, so an external theme that still hardcodes " (page " is
+  overridden too; the built-in themes now only style the number.
+
 ## [1.4.0] - 2026-11-03
 
 ### Added

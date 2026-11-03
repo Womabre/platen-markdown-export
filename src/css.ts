@@ -17,6 +17,7 @@ import { PAPER_SIZES } from './frontmatter';
 import { fetchRemote } from './fetch';
 import { log } from './logger';
 import { literal } from './strings';
+import { documentLabels } from './labels';
 import type { ColorPalette, FontConfig, PageCssTokens, PaperDimensions, PageOrientation } from './types';
 
 // ── Highlight.js theme ────────────────────────────────────────────────────────
@@ -615,4 +616,21 @@ export async function buildFallbackFontStyles(): Promise<string> {
     ).filter((f): f is string => f !== null).join('\n');
 
     return rules ? `<style>\n${rules}\n</style>` : '';
+}
+
+// ── Cross-reference page numbers ──────────────────────────────────────────────
+
+/**
+ * The text after a `{.page-ref}` link — " (page 12)" — in the document's `Lang`.
+ *
+ * The word is language, not branding, so the exporter writes it rather than each
+ * theme: every theme used to hardcode " (page " and a Dutch document printed
+ * "zie Distributie (page 5)". Injected after the theme stylesheet, so it also
+ * overrides an external theme that still carries the old English rule; the
+ * theme keeps the look (size, wrapping) and only `content` comes from here.
+ * PDF only — browsers drop a declaration holding target-counter().
+ */
+export function buildPageRefCss(lang: string | null | undefined): string {
+    const word = documentLabels(lang).pageRef.replace(/["\\]/g, '\\$&');
+    return `<style>a.page-ref::after { content: " (${word} " target-counter(attr(href), page) ")"; }</style>`;
 }

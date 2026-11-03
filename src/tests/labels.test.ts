@@ -6,6 +6,7 @@ import { documentLabels } from '../labels';
 import { applyCaptions } from '../markdown-extras';
 import { buildGlossary } from '../markdown';
 import { listThemes, THEMES_DIR } from '../theme';
+import { buildPageRefCss } from '../css';
 
 describe('documentLabels', () => {
     it('returns the Dutch labels for nl', () => {
@@ -67,6 +68,34 @@ describe('every theme gives the caption indexes a page number WeasyPrint can res
             assert.match(css,
                 /nav\.caption-index a::after\s*\{[^}]*content:\s*leader\(dotted\) target-counter\(attr\(href\), page\)/,
                 `${name}: caption index has no leader()/target-counter() rule`);
+        });
+    }
+});
+
+describe('buildPageRefCss words the page number in the document language', () => {
+    it('writes "blz." for nl and "page" without a language', () => {
+        assert.match(buildPageRefCss('nl-NL'), /content: " \(blz\. " target-counter\(attr\(href\), page\) "\)"/);
+        assert.match(buildPageRefCss(undefined), /content: " \(page " target-counter/);
+    });
+
+    it('has a page-ref word for every language', () => {
+        for (const lang of ['en', 'nl', 'de', 'fr', 'es']) {
+            assert.ok(documentLabels(lang).pageRef.trim(), lang);
+        }
+    });
+});
+
+describe('no theme hardcodes the page-ref wording', () => {
+    // The word is language, written by buildPageRefCss. A theme that sets
+    // content on a.page-ref::after puts English back into every Dutch PDF,
+    // unless its rule happens to load before the exporter's.
+    for (const name of listThemes()) {
+        const file = path.join(THEMES_DIR, name, 'css', 'theme.css');
+        if (!fs.existsSync(file)) continue;
+
+        it(`${name} leaves a.page-ref::after content to the exporter`, () => {
+            const css = fs.readFileSync(file, 'utf8');
+            assert.doesNotMatch(css, /a\.page-ref::after\s*\{[^}]*content:/, name);
         });
     }
 });

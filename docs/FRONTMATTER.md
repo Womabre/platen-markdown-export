@@ -26,7 +26,7 @@ in the package.
 Title: My Document — Subtitle         # text after " — " (or ": ") becomes a cover subtitle
 Header: Custom running header        # default: Title
 Footer:                              # default: "page N of M"
-Lang: en                             # en, nl, de, fr, es (affects glossary labels)
+Lang: en                             # en, nl, de, fr, es (glossary, caption and page-ref labels)
 Mode: pdf                            # pdf, html, debug — comma-separated allowed
 Export On Save: false                # VS Code only: keep this document out of export-on-save
 Status: Work In Progress             # see "Revision workflow" below
@@ -134,6 +134,6 @@ Seven optional switches, all off unless set. Each theme's `sample *.md` enables 
 
 Two related print features need no frontmatter switch:
 
-- **Cross-references with page numbers** — add `{.page-ref}` to any internal link and the resolved page number is appended at export time: `See [the sizing table](#sizing){.page-ref}` → "See the sizing table (page 12)".
+- **Cross-references with page numbers** — add `{.page-ref}` to any internal link and the resolved page number is appended at export time: `See [the sizing table](#sizing){.page-ref}` → "See the sizing table (page 12)". The word follows `Lang`: `nl` gives "(blz. 12)", `de` "(S. 12)", `fr` "(p. 12)", `es` "(pág. 12)".
 - **Frontmatter variables** — `{{Name}}` anywhere in the body is replaced from the `Variables:` mapping before parsing, so one template can serve many customers. Unknown placeholders are left verbatim and warned about (never silently blanked). Occurrences inside code fences and inline code are left alone, so documentation about the feature stays literal.
 - **Page orientation** — `Orientation: landscape` turns the whole document (cover included) landscape. Either way, `::: landscape` and `::: portrait` containers force one sheet of that orientation, so a portrait document can hold a landscape table and a landscape document can hold a portrait page of prose.

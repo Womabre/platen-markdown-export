@@ -474,9 +474,9 @@ details > summary + * {
 
 /* ── Cross-references with live page numbers ──────────────────────────────────
    Mark any internal link `[text](#anchor){.page-ref}` to have the resolved page
-   number appended at print time. */
+   number appended at print time. The words come from the exporter, in the
+   document's Lang (buildPageRefCss); this rule only styles them. */
 a.page-ref::after {
-  content: " (page " target-counter(attr(href), page) ")";
   font-size: 0.9em;
   white-space: nowrap;
 }

@@ -18,7 +18,7 @@ import { inlineImages, injectLogoElements, checkLocalImages, type PageGeometry }
 import { buildCoverPage, buildHtmlBanner, HTML_BANNER_CSS, buildStyleOverrideCss, resolveStyleMainColor, validateDocumentColors } from './cover';
 import { setActiveTheme, applyStyleOverrides, applyLogoOverride, setThemeRoots } from './theme';
 import { buildCopyButtonCss, buildCopyButtonScript, copyAccentColor, documentWantsCopyButtons } from './copy-buttons';
-import { buildPageCss, buildPageMetricsCss, buildFallbackFontStyles, buildHljsStyleBlock, buildThemeVarsCss, HTML_BODY_CSS, buildHtmlDarkModeCss } from './css';
+import { buildPageCss, buildPageMetricsCss, buildPageRefCss, buildFallbackFontStyles, buildHljsStyleBlock, buildThemeVarsCss, HTML_BODY_CSS, buildHtmlDarkModeCss } from './css';
 import { buildIconStyles, inlineRemoteStylesheets, inlineLocalStylesheet, clearCssImportCache } from './stylesheets';
 import { injectTocWrapper, rebuildToc, inlineAlertIconColors, inlineAdmonitionIconColors, inlineHexColorCode, replaceTaskListInputs, wrapEmoji, numberHeadings, buildCaptionIndex, injectCaptionIndexes, buildWatermark, buildClassificationHeader, injectPageChrome, addBodyClasses, injectDocumentMetadata, injectCodeFontDefaults, TASK_LIST_CSS, HEADING_ICON_CSS, EMOJI_CSS, TABLE_FIT_CSS } from './html';
 import { renderMermaidDiagrams, MERMAID_CSS, hasMermaidPlaceholders, mermaidUnavailableReason } from './mermaid';
@@ -267,6 +267,7 @@ export async function buildHtmlPipeline(
         `<style>${HEADING_ICON_CSS}</style>`,
         `<style>${EMOJI_CSS}</style>`,
         `<style>${TABLE_FIT_CSS}</style>`,
+        buildPageRefCss(fm.lang),
         buildStyleOverrideCss(style),
     ].filter(Boolean).join('\n');
 
