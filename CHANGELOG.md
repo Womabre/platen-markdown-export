@@ -8,6 +8,15 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **The VS Code extension publishes itself to the Marketplace.** A new
+  `publish.yml` workflow runs after every successful tag release and publishes
+  that release's per-platform `.vsix` files through Marketplace Trusted
+  Publishing (`vsce publish --oidc`), so no Personal Access Token is stored. It
+  publishes the files the release already tested rather than rebuilding them,
+  and can be run by hand for an existing tag.
+
 ## [1.5.0] - 2026-11-03
 
 ### Changed

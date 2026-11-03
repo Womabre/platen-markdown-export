@@ -1,0 +1,60 @@
+name: Publish
+
+# Puts a finished release on the VS Code Marketplace, through Trusted
+# Publishing: GitHub mints a short-lived OIDC token, vsce exchanges it for a
+# Marketplace credential, and no PAT is stored anywhere.
+#
+# This is its own file because the Marketplace policy names the workflow FILE
+# that may publish (publish.yml), not the repository. It never builds anything:
+# it publishes the .vsix files release.yml already verified and attached to the
+# GitHub Release, so what reaches the Marketplace is byte-for-byte what was
+# tested.
+#
+# Runs on its own after a successful tag release. To publish (or retry) an
+# existing release by hand: Actions → Publish → Run workflow, with the tag.
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish, e.g. v1.5.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  marketplace:
+    name: VS Code Marketplace
+    # Only a Release that ran for a pushed tag and succeeded. A manual dry run of
+    # release.yml is a workflow_dispatch, so it never reaches here.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write      # the OIDC token vsce exchanges with the Marketplace
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'   # vsce 4 requires Node 22
+
+      - name: Download the release's .vsix files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.vsix' --dir vsix
+          ls -lh vsix
+
+      # One call for every platform: vsce exchanges a fresh OIDC token per
+      # package. --skip-duplicate makes a re-run after a partial failure finish
+      # the remaining platforms instead of failing on the ones already live.
+      - name: Publish
+        run: npx --yes @vscode/vsce@4.1.0 publish --oidc --skip-duplicate --packagePath vsix/*.vsix
