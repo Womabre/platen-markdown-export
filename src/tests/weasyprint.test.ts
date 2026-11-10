@@ -5,7 +5,8 @@ import * as os   from 'os';
 import * as path from 'path';
 import * as http from 'http';
 import { startServer, categorizeStderr, exportPdf, explainWeasyprintFailure, buildWeasyprintArgs,
-         probeColorEmojiRendering, colorEmojiRenderingSupported } from '../weasyprint';
+         probeColorEmojiRendering, colorEmojiRenderingSupported, buildWeasyprintEnv } from '../weasyprint';
+import { CONFIG } from '../config';
 import { tempSiblingPath, commitFileAtomic, writeFileAtomic } from '../fsutil';
 
 // ── startServer ───────────────────────────────────────────────────────────────
@@ -230,6 +231,154 @@ describe('startServer', () => {
 });
 
 // ── categorizeStderr ──────────────────────────────────────────────────────────
+
+// ── The server as WeasyPrint's proxy ──────────────────────────────────────────
+//
+// WeasyPrint fetches whatever the pipeline did not inline, and it is pointed at
+// this server as its HTTP proxy so those fetches meet the same guard. These
+// drive the proxy the way a proxy client does: an absolute-form request target
+// for http, CONNECT for https.
+
+describe('startServer as a proxy', () => {
+    let origin: http.Server;
+    let originPort: number;
+    let originHits: string[];
+    const saved = CONFIG.allowPrivateHosts;
+
+    before(async () => {
+        originHits = [];
+        origin = http.createServer((req, res) => {
+            originHits.push(req.url ?? '');
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('internal');
+        });
+        await new Promise<void>(resolve => origin.listen(0, '127.0.0.1', resolve));
+        originPort = (origin.address() as { port: number }).port;
+    });
+
+    after(() => { CONFIG.allowPrivateHosts = saved; origin.close(); });
+
+    /** A CONNECT through the proxy; resolves with the status and the tunnel. */
+    function connect(port: number, target: string): Promise<{ status: number; socket: import('net').Socket }> {
+        return new Promise((resolve, reject) => {
+            const req = http.request({ hostname: '127.0.0.1', port, method: 'CONNECT', path: target });
+            req.on('connect', (res, socket) => resolve({ status: res.statusCode ?? 0, socket }));
+            req.on('error', reject);
+            req.end();
+        });
+    }
+
+    it('serves its own document through the proxy form, token and all', async () => {
+        const { server, port, token } = await startServer(path.join(tmpDir, 'page.html'));
+        try {
+            const { status, body } = await get(port, `http://127.0.0.1:${port}/${token}/page.html`);
+            assert.equal(status, 200);
+            assert.ok(body.includes('hello'));
+        } finally { server.close(); }
+    });
+
+    it('still demands the token in the proxy form', async () => {
+        const { server, port } = await startServer(path.join(tmpDir, 'page.html'));
+        try {
+            assert.equal((await get(port, `http://127.0.0.1:${port}/page.html`)).status, 403);
+        } finally { server.close(); }
+    });
+
+    // The defect: the pipeline refused this URL, left the tag in place, and
+    // WeasyPrint fetched it itself. Through the proxy it is refused again, and
+    // the internal server never hears about it.
+    it('refuses to relay a request for a loopback host', async () => {
+        CONFIG.allowPrivateHosts = false;
+        originHits.length = 0;
+        const { server, port } = await startServer(path.join(tmpDir, 'page.html'));
+        try {
+            assert.equal((await get(port, `http://127.0.0.1:${originPort}/secret`)).status, 403);
+            assert.equal((await get(port, `http://localhost:${originPort}/secret`)).status, 403);
+            assert.equal((await get(port, `http://[::ffff:127.0.0.1]:${originPort}/secret`)).status, 403);
+            assert.deepEqual(originHits, []);
+        } finally { server.close(); }
+    });
+
+    it('does not treat another spelling of its own address as itself', async () => {
+        CONFIG.allowPrivateHosts = false;
+        const { server, port, token } = await startServer(path.join(tmpDir, 'page.html'));
+        try {
+            assert.equal((await get(port, `http://localhost:${port}/${token}/page.html`)).status, 403);
+        } finally { server.close(); }
+    });
+
+    it('refuses a non-http scheme in the proxy form', async () => {
+        const { server, port } = await startServer(path.join(tmpDir, 'page.html'));
+        try {
+            assert.equal((await get(port, 'ftp://example.com/x')).status, 403);
+        } finally { server.close(); }
+    });
+
+    it('refuses a CONNECT to a loopback host, by address and by name', async () => {
+        CONFIG.allowPrivateHosts = false;
+        originHits.length = 0;
+        const { server, port } = await startServer(path.join(tmpDir, 'page.html'));
+        try {
+            for (const target of [`127.0.0.1:${originPort}`, `localhost:${originPort}`, `[::1]:${originPort}`]) {
+                const { status, socket } = await connect(port, target);
+                socket.destroy();
+                assert.equal(status, 403, target);
+            }
+            assert.deepEqual(originHits, []);
+        } finally { server.close(); }
+    });
+
+    it('relays and tunnels once private hosts are allowed', async () => {
+        CONFIG.allowPrivateHosts = true;
+        originHits.length = 0;
+        const { server, port } = await startServer(path.join(tmpDir, 'page.html'));
+        try {
+            const relayed = await get(port, `http://127.0.0.1:${originPort}/relayed`);
+            assert.equal(relayed.status, 200);
+            assert.equal(relayed.body, 'internal');
+
+            const { status, socket } = await connect(port, `127.0.0.1:${originPort}`);
+            assert.equal(status, 200);
+            const reply = await new Promise<string>(resolve => {
+                let data = '';
+                socket.on('data', (c: Buffer) => { data += c.toString(); });
+                socket.on('end', () => resolve(data));
+                socket.write('GET /tunnelled HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n');
+            });
+            assert.ok(reply.startsWith('HTTP/1.1 200') && reply.includes('internal'), reply);
+            assert.deepEqual(originHits, ['/relayed', '/tunnelled']);
+        } finally { server.close(); CONFIG.allowPrivateHosts = false; }
+    });
+});
+
+describe('buildWeasyprintEnv', () => {
+    it('returns the environment untouched when there is no proxy', () => {
+        const base = { PATH: '/bin', HTTP_PROXY: 'http://corp:8080' };
+        assert.equal(buildWeasyprintEnv(base, null), base);
+    });
+
+    it('points both schemes at the proxy', () => {
+        const env = buildWeasyprintEnv({ PATH: '/bin' }, 'http://127.0.0.1:5');
+        assert.equal(env.http_proxy, 'http://127.0.0.1:5');
+        assert.equal(env.https_proxy, 'http://127.0.0.1:5');
+        assert.equal(env.PATH, '/bin');
+    });
+
+    // A surviving NO_PROXY names hosts WeasyPrint may reach without the proxy.
+    it('removes every other proxy variable, in either case', () => {
+        const env = buildWeasyprintEnv({
+            HTTP_PROXY: 'http://corp:8080', HTTPS_PROXY: 'http://corp:8080', ALL_PROXY: 'socks://corp',
+            NO_PROXY: '*', no_proxy: 'localhost,127.0.0.1', Https_Proxy: 'x', KEEP: '1',
+        }, 'http://127.0.0.1:5');
+        assert.deepEqual(Object.keys(env).sort(), ['KEEP', 'http_proxy', 'https_proxy']);
+    });
+
+    it('does not mutate the environment it was given', () => {
+        const base = { NO_PROXY: '*' };
+        buildWeasyprintEnv(base, 'http://127.0.0.1:5');
+        assert.deepEqual(base, { NO_PROXY: '*' });
+    });
+});
 
 describe('categorizeStderr', () => {
     it('puts non-WARNING lines into errors', () => {

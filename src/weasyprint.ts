@@ -1,13 +1,15 @@
 import * as fs from 'fs';
 import * as http from 'http';
+import * as net  from 'net';
 import * as os   from 'os';
 import * as path from 'path';
 import { randomBytes } from 'crypto';
 import { execFile } from 'child_process';
 import { CONFIG, MIME_TYPES } from './config';
-import { commitFileAtomic, tempSiblingPath } from './fsutil';
+import { commitFileAtomic, resolveWriteTarget, tempSiblingPath } from './fsutil';
 import { log } from './logger';
 import { ExitError } from './errors';
+import { assertPublicHostname, BlockedHostError, fetchRemote, guardedLookup } from './fetch';
 
 // ── Local dev server ──────────────────────────────────────────────────────────
 
@@ -21,6 +23,11 @@ export interface LocalServer {
     token: string;
     /** Absolute URL for a file in the served directory, token included. */
     urlFor(relativePath: string): string;
+    /**
+     * This server's address as an HTTP proxy, for {@link exportPdf}. Every
+     * request WeasyPrint makes is sent here — see {@link startServer}.
+     */
+    proxyUrl: string;
 }
 
 export interface ServeOptions {
@@ -51,6 +58,27 @@ export interface ServeOptions {
  *
  * Traversal is still rejected below the token check: the token authorises this
  * directory, never an escape from it.
+ *
+ * **It is also WeasyPrint's only way out.** WeasyPrint is a second fetcher: any
+ * URL the pipeline did not inline — an `<img>` whose fetch was refused, a
+ * `url()` in a `<style>` block or a `style` attribute, an `@import` — it
+ * requests itself, with none of `fetch.ts`'s rules. So the private-address guard
+ * refused `http://169.254.169.254/` with a warning, left the tag as it was, and
+ * WeasyPrint fetched it a second later and embedded the answer in the PDF.
+ *
+ * WeasyPrint has no fetch hook on its command line, but it honours the proxy
+ * environment variables, and with those set it sends *every* request to the
+ * proxy, loopback included (verified against WeasyPrint 70). So this server is
+ * handed to it as that proxy ({@link buildWeasyprintEnv}) and answers three
+ * kinds of request:
+ *
+ *   - one for this server itself: the document and its assets, token-gated as
+ *     above;
+ *   - any other `http://` URL: fetched through `fetchRemote`, so the scheme,
+ *     redirect, size and private-address rules all apply;
+ *   - `CONNECT` (how `https://` goes through a proxy): tunnelled, after the host
+ *     has been judged — a literal address directly, a name by `guardedLookup`
+ *     on the lookup the tunnel is dialled with.
  */
 export function startServer(htmlFile: string, options: ServeOptions = {}): Promise<LocalServer> {
     const baseDir = path.dirname(htmlFile);
@@ -59,14 +87,15 @@ export function startServer(htmlFile: string, options: ServeOptions = {}): Promi
     const virtual = new Map(Object.entries(options.files ?? {}));
 
     return new Promise((resolve, reject) => {
-        const server = http.createServer((req, res) => {
-            if (req.url === '/favicon.ico') { res.writeHead(204); res.end(); return; }
+        /** Serves `/<token>/<path>` from memory or the document's directory. */
+        const serveLocal = (target: string, res: http.ServerResponse): void => {
+            if (target === '/favicon.ico') { res.writeHead(204); res.end(); return; }
 
             // A request target is `path[?query][#fragment]`, and the query is not
             // part of the filename. Cache-busted asset references are ordinary in
             // hand-written HTML (`<img src="chart.png?v=2">`), and treating the
             // whole target as a path turned every one of them into a 404.
-            const rawUrl = (req.url ?? '/').split(/[?#]/, 1)[0];
+            const rawUrl = target.split(/[?#]/, 1)[0];
             if (!rawUrl.startsWith(prefix)) {
                 res.writeHead(403); res.end(); return;
             }
@@ -101,6 +130,88 @@ export function startServer(htmlFile: string, options: ServeOptions = {}): Promi
                 res.writeHead(200, { 'Content-Type': type });
                 res.end(content);
             });
+        };
+
+        /** Why a proxied request was not served, for the log. */
+        const refusal = (what: string, err: unknown): string => {
+            const reason = err instanceof Error ? err.message : String(err);
+            // A refusal is a WARNING (it reaches --strict); an ordinary failed
+            // fetch is WeasyPrint's to report, as it always was.
+            return `${err instanceof BlockedHostError ? 'WARNING: Blocked' : 'Could not serve'} ` +
+                   `a request WeasyPrint made for ${what}: ${reason}`;
+        };
+
+        /** A proxied `http://` request for somewhere else, fetched under the guard. */
+        const relay = (url: URL, req: http.IncomingMessage, res: http.ServerResponse): void => {
+            if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return; }
+            fetchRemote(url.toString()).then(
+                ({ buffer, mimeType }) => {
+                    res.writeHead(200, { 'Content-Type': mimeType, 'Content-Length': buffer.length });
+                    res.end(req.method === 'HEAD' ? undefined : buffer);
+                },
+                (err: unknown) => {
+                    log(refusal(url.toString(), err));
+                    res.writeHead(err instanceof BlockedHostError ? 403 : 502); res.end();
+                },
+            );
+        };
+
+        const server = http.createServer((req, res) => {
+            const target = req.url ?? '/';
+            // Origin-form (`/path`): a direct request. Absolute-form
+            // (`http://host/path`): this server being used as a proxy.
+            if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) { serveLocal(target, res); return; }
+
+            let url: URL;
+            try { url = new URL(target); }
+            catch { res.writeHead(400); res.end(); return; }
+            if (url.protocol !== 'http:') { res.writeHead(403); res.end(); return; }
+
+            // Only this exact origin is "us". `localhost:<port>` and every other
+            // spelling of loopback go through the guard like any other host.
+            const address = server.address();
+            const ownPort = address && typeof address === 'object' ? address.port : -1;
+            if (url.hostname === '127.0.0.1' && Number(url.port) === ownPort) {
+                serveLocal(url.pathname + url.search, res);
+                return;
+            }
+            relay(url, req, res);
+        });
+
+        // `https://` through a proxy is a CONNECT to `host:port`, then TLS the
+        // proxy cannot see into. What it can do — and all the guard needs — is
+        // choose whether to dial, and which address.
+        server.on('connect', (req: http.IncomingMessage, client: net.Socket, head: Buffer) => {
+            const refuse = (status: string, err: unknown): void => {
+                log(refusal(`https://${req.url ?? ''}`, err));
+                client.end(`HTTP/1.1 ${status}\r\n\r\n`);
+            };
+
+            let host: string, port: number;
+            try {
+                const parsed = new URL(`http://${req.url ?? ''}`);
+                host = parsed.hostname.replace(/^\[|\]$/g, '');
+                port = Number(parsed.port) || 443;
+                assertPublicHostname(host);
+            } catch (err: unknown) { refuse('403 Forbidden', err); return; }
+
+            let established = false;
+            const upstream = net.connect({ host, port, lookup: guardedLookup, timeout: CONFIG.fetchTimeoutMs });
+            upstream.once('connect', () => {
+                established = true;
+                upstream.setTimeout(0);
+                client.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+                if (head.length) upstream.write(head);
+                upstream.pipe(client);
+                client.pipe(upstream);
+            });
+            upstream.once('timeout', () => upstream.destroy(new Error(`Connection timed out: ${host}:${port}`)));
+            upstream.on('error', (err: Error) => {
+                if (established) client.destroy();
+                else refuse(err instanceof BlockedHostError ? '403 Forbidden' : '502 Bad Gateway', err);
+            });
+            client.on('error', () => upstream.destroy());
+            client.on('close', () => upstream.destroy());
         });
 
         server.listen(0, '127.0.0.1', () => {
@@ -113,6 +224,7 @@ export function startServer(htmlFile: string, options: ServeOptions = {}): Promi
                 token,
                 urlFor: (relativePath: string) =>
                     `http://127.0.0.1:${port}${prefix}${encodeURIComponent(relativePath)}`,
+                proxyUrl: `http://127.0.0.1:${port}`,
             });
         });
 
@@ -314,12 +426,37 @@ export function buildWeasyprintArgs(
     return args;
 }
 
+/**
+ * The environment WeasyPrint runs in: the caller's, with the proxy variables
+ * replaced by `proxyUrl` so that every request it makes goes through
+ * {@link startServer}'s guard.
+ *
+ * Every spelling is removed first, not just overwritten. The variables are
+ * case-sensitive on POSIX and both cases are read, and a surviving `NO_PROXY`
+ * would name hosts WeasyPrint may reach *without* the proxy — which is the
+ * hole this closes. A machine-level proxy is dropped on purpose as well: the
+ * pipeline's own fetcher never used one, so this is not a route that worked.
+ *
+ * With no `proxyUrl` the environment is returned as it was. Exported for testing.
+ */
+export function buildWeasyprintEnv(base: NodeJS.ProcessEnv, proxyUrl: string | null): NodeJS.ProcessEnv {
+    if (!proxyUrl) return base;
+    const env: NodeJS.ProcessEnv = {};
+    for (const [key, value] of Object.entries(base)) {
+        if (!/^(?:https?|all|ftp|no)_proxy$/i.test(key)) env[key] = value;
+    }
+    env.http_proxy  = proxyUrl;
+    env.https_proxy = proxyUrl;
+    return env;
+}
+
 export function exportPdf(
     weasyprintPath: string,
     url: string,
     pdfFile: string,
     dpi: number = CONFIG.weasyprintDpi,
     pdfVariant: string | null = CONFIG.pdfVariant,
+    proxyUrl: string | null = null,
 ): Promise<void> {
     log('Launching WeasyPrint...');
 
@@ -327,6 +464,10 @@ export function exportPdf(
     // has emitted PDF and nothing else since it dropped PNG output in v53, so it
     // never infers a format from the output filename (there is no `--format`
     // flag to override either). Verified against the binary, not assumed.
+    //
+    // An output path that is a symlink is written through, like the source
+    // document is — see `resolveWriteTarget`.
+    pdfFile = resolveWriteTarget(pdfFile);
     const tmpPdf = tempSiblingPath(pdfFile);
     const discardTemp = (): void => {
         try { fs.rmSync(tmpPdf, { force: true }); } catch { /* best-effort */ }
@@ -336,7 +477,7 @@ export function exportPdf(
         execFile(
             weasyprintPath,
             buildWeasyprintArgs(url, tmpPdf, dpi, pdfVariant),
-            { maxBuffer: 50 * 1024 * 1024 },
+            { maxBuffer: 50 * 1024 * 1024, env: buildWeasyprintEnv(process.env, proxyUrl) },
             (error, stdout, stderr) => {
                 if (stdout) log(`stdout: ${stdout}`);
 

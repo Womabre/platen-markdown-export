@@ -360,6 +360,17 @@ describe('isPrivateAddress', () => {
         ['IPv6 multicast',        'ff02::1'],
         ['IPv4-mapped loopback',  '::ffff:127.0.0.1'],
         ['IPv4-mapped private',   '::ffff:10.0.0.1'],
+        // The spelling `new URL()` hands back: `[::ffff:127.0.0.1]` arrives here
+        // as hex groups, which the old dotted-only pattern did not recognise.
+        ['IPv4-mapped loopback, hex',  '::ffff:7f00:1'],
+        ['IPv4-mapped metadata, hex',  '::ffff:a9fe:a9fe'],
+        ['IPv4-mapped, uncompressed',  '0:0:0:0:0:ffff:7f00:1'],
+        ['IPv4-compatible loopback',   '::7f00:1'],
+        ['NAT64 loopback',             '64:ff9b::7f00:1'],
+        ['NAT64 private, dotted',      '64:ff9b::10.0.0.1'],
+        ['6to4 private',               '2002:c0a8:101::1'],
+        ['IPv6 loopback, uncompressed', '0:0:0:0:0:0:0:1'],
+        ['IPv6 link-local, high bits', 'febf::1'],
     ] as const;
 
     for (const [what, ip] of blocked) {
@@ -368,7 +379,8 @@ describe('isPrivateAddress', () => {
         });
     }
 
-    const allowed = ['1.1.1.1', '8.8.8.8', '172.15.0.1', '172.32.0.1', '100.63.255.255', '2606:4700::1111'];
+    const allowed = ['1.1.1.1', '8.8.8.8', '172.15.0.1', '172.32.0.1', '100.63.255.255', '2606:4700::1111',
+                     '::ffff:8.8.8.8', '::ffff:808:808', '64:ff9b::808:808', '2002:808:808::1'];
     for (const ip of allowed) {
         it(`allows the public address ${ip}`, () => {
             assert.equal(isPrivateAddress(ip), false);
@@ -432,3 +444,17 @@ describe('fetchRemote with the guard on', () => {
 // for a boring reason: reaching a test server at all means reaching loopback,
 // which is the very thing the guard refuses — the two cannot both hold in one
 // process. `resolveRedirect` (above) covers the hop's other rules.
+
+describe('fetchRemote refuses a private address however it is spelled', () => {
+    before(() => { CONFIG.allowPrivateHosts = false; });
+    after(()  => { CONFIG.allowPrivateHosts = true; });
+
+    // Reproduced against a live loopback server before the fix: the URL parser
+    // normalises the dotted form to hex groups, and the request went out.
+    for (const url of ['http://[::ffff:127.0.0.1]:9/x', 'http://[::ffff:169.254.169.254]/latest/meta-data/',
+                       'http://[64:ff9b::7f00:1]:9/x', 'http://[::127.0.0.1]:9/x']) {
+        it(`refuses ${url}`, async () => {
+            await assert.rejects(() => fetchRemote(url), (err: unknown) => err instanceof BlockedHostError);
+        });
+    }
+});

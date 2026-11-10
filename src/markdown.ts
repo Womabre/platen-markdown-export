@@ -21,6 +21,7 @@ import { writeFileAtomic } from './fsutil';
 import { mermaidPlaceholder } from './mermaid';
 import { graphvizPlaceholder } from './graphviz';
 import { infographicPlaceholder } from './infographic';
+import { attrOf, setAttr, tagPattern } from './attributes';
 import { escHtml, extractFrontmatter, stampRevisionDate, resolveRevision, CONCURRENT_EXPORT_HINT } from './frontmatter';
 import type { FrontmatterData } from './types';
 import { documentLabels } from './labels';
@@ -142,27 +143,56 @@ export function stripMarkdownToc(body: string): string {
     return body;
 }
 
+/** A source that already says where it is: a URL, a data URI, or an absolute path. */
+const ANCHORED_SRC_RE = /^(?:https?:|data:|\/|[a-z]:[\\/])/i;
+
 /**
- * Rewrites relative markdown image paths `![alt](rel/path.png)` to absolute
- * paths anchored at `fromDir`. Leaves URLs and already-absolute paths alone.
- * Applied to included content so that image paths survive being transplanted
- * into a document in a different directory.
+ * Rewrites relative image paths to absolute paths anchored at `fromDir`, in
+ * both spellings an image has: markdown `![alt](rel/path.png)` and a
+ * hand-written `<img src="rel/path.png">`. Leaves URLs and already-absolute
+ * paths alone. Applied to included content so that image paths survive being
+ * transplanted into a document in a different directory.
+ *
+ * Only outside fenced code blocks. An included file that *shows* image syntax
+ * in a code sample used to have that sample rewritten too, so the exported
+ * document printed the author's own absolute path — `/Users/<name>/…` — in the
+ * middle of an example. That is a wrong example and a leaked local path at once.
+ *
+ * And the `<img>` form because `html: true` is on: a sized or captioned image is
+ * routinely written as a tag, and one in an included file kept its relative
+ * `src`, resolved against the wrong directory, and was reported missing.
  */
 export function rewriteRelativeImagePaths(body: string, fromDir: string): string {
-    return body.replace(
-        /!\[([^\]]*)\]\(([^)]+)\)/g,
-        (_match, alt: string, spec: string) => {
-            const titleMatch = spec.match(/^(.+?)\s+["']([^"']*)["']$/);
-            const rawSrc = (titleMatch ? titleMatch[1] : spec).trim();
-            const title  = titleMatch ? ` "${titleMatch[2]}"` : '';
+    return outsideFences(body, text => text
+        .replace(
+            /!\[([^\]]*)\]\(([^)]+)\)/g,
+            (_match, alt: string, spec: string) => {
+                const titleMatch = spec.match(/^(.+?)\s+["']([^"']*)["']$/);
+                const rawSrc = (titleMatch ? titleMatch[1] : spec).trim();
+                const title  = titleMatch ? ` "${titleMatch[2]}"` : '';
 
-            if (/^(https?:|data:|\/)/i.test(rawSrc)) return _match;
+                // `<…>` is the destination's own delimiter, not part of the path.
+                const src = rawSrc.replace(/^<(.*)>$/, '$1');
+                if (ANCHORED_SRC_RE.test(src)) return _match;
 
-            // Wrap in angle brackets so spaces and special chars in the absolute
-            // path don't break the markdown image link parser.
-            return `![${alt}](<${path.resolve(fromDir, rawSrc)}>${title})`;
-        },
-    );
+                // Wrap in angle brackets so spaces and special chars in the absolute
+                // path don't break the markdown image link parser.
+                return `![${alt}](<${path.resolve(fromDir, src)}>${title})`;
+            },
+        )
+        .replace(tagPattern('img'), tag => {
+            const src = attrOf(tag, 'src');
+            if (!src || ANCHORED_SRC_RE.test(src)) return tag;
+            // Not a path at all: a template placeholder, left for whatever fills it.
+            if (src.includes('${') || src.includes("'+")) return tag;
+
+            let decoded: string;
+            try { decoded = decodeURIComponent(src); } catch { decoded = src; }
+            // Encoded on the way back in, because `inlineImages` decodes a `src`
+            // before resolving it and a literal `%` in a directory name would
+            // otherwise not survive the round trip.
+            return setAttr(tag, 'src', encodeURI(path.resolve(fromDir, decoded)));
+        }));
 }
 
 /**

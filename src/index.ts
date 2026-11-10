@@ -419,9 +419,11 @@ async function runExport(htmlContent: string, opts: ExportOptions): Promise<void
         log(`Temp file kept for inspection: ${debugFile}`);
     }
 
-    const { server, urlFor } = await startServer(htmlFile, { files: { [servedName]: htmlContent } });
+    const { server, urlFor, proxyUrl } = await startServer(htmlFile, { files: { [servedName]: htmlContent } });
     try {
-        await exportPdf(weasyprintPath, urlFor(servedName), pdfFile, dpi, pdfVariant);
+        // The server doubles as WeasyPrint's proxy, so anything the pipeline
+        // left un-inlined is fetched under the same guard as everything else.
+        await exportPdf(weasyprintPath, urlFor(servedName), pdfFile, dpi, pdfVariant, proxyUrl);
         const elapsedS = ((Date.now() - opts.startMs) / 1000).toFixed(1);
         logResult(`${summarizePdf(pdfFile)} in ${elapsedS} s`);
         if (open) openFile(pdfFile);

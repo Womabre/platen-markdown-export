@@ -8,6 +8,43 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-11-10
+
+### Security
+
+- **WeasyPrint can no longer fetch what the exporter refused.** A URL the
+  pipeline did not inline, such as an image whose fetch was refused, a `url()`
+  in a `<style>` block or a `style` attribute, or an `@import`, was requested
+  by WeasyPrint itself with none of the private-address rules. A document could
+  therefore still pull a page off loopback, an intranet host or the cloud
+  metadata endpoint into its PDF, right after the log said the fetch was
+  refused. The local document server now doubles as WeasyPrint's HTTP proxy
+  (`http_proxy` / `https_proxy` are set for the WeasyPrint process only), so
+  every request it makes goes through the same guard: plain `http` is fetched
+  by the exporter's own fetcher, `https` is tunnelled only to an address the
+  guard accepts. A blocked request is logged as a warning, so `--strict`
+  refuses it. `EXPORT_PDF_ALLOW_PRIVATE_HOSTS=1` still opts a machine in.
+  Proxy variables already in the environment are not passed on to WeasyPrint.
+- **The private-address guard recognises an IPv4 address inside an IPv6 one.**
+  `http://[::ffff:127.0.0.1]/` was fetched: the URL parser rewrites the dotted
+  form to hex groups (`::ffff:7f00:1`) before the check ran, and the check only
+  knew the dotted spelling. IPv4-mapped, IPv4-compatible, NAT64 (`64:ff9b::/96`)
+  and 6to4 (`2002::/16`) addresses are now judged as the IPv4 address they
+  carry.
+
+### Fixed
+
+- **A symlinked document stays a symlink.** Stamping the revision date, bumping
+  a release or writing an output through a symlink replaced the link with a
+  regular file and left the file it pointed at unchanged. Writes now go to the
+  link's target.
+- **Image paths in an included file are rewritten in the right places.** A
+  code block in an included file that showed image syntax had the sample
+  rewritten to the exporting machine's absolute path; fenced code is now left
+  alone. A hand-written `<img src="...">` in an included file kept its relative
+  path and was reported missing; it is now resolved against the included file's
+  own folder, like the markdown form.
+
 ## [1.5.1] - 2026-11-10
 
 ### Fixed

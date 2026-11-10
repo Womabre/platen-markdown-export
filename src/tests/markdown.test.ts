@@ -357,6 +357,47 @@ describe('rewriteRelativeImagePaths', () => {
         assert.ok(result.match(/\(<[^>]+>\)/), `expected angle brackets: ${result}`);
     });
 
+    // An included file that SHOWS image syntax used to have the sample
+    // rewritten, printing the exporting machine's absolute path in the example.
+    it('leaves image syntax inside a fenced code block alone', () => {
+        const body = 'Before\n\n```md\n![alt](img.png)\n<img src="img.png">\n```\n\nAfter';
+        assert.equal(rewriteRelativeImagePaths(body, '/docs/sub'), body);
+    });
+
+    it('still rewrites an image after a code block has closed', () => {
+        const result = rewriteRelativeImagePaths('```\n![a](x.png)\n```\n\n![b](y.png)', '/docs');
+        assert.ok(result.includes('![a](x.png)'), `fenced sample must survive: ${result}`);
+        assert.ok(result.includes(path.resolve('/docs', 'y.png')), `got: ${result}`);
+    });
+
+    it('rewrites a hand-written <img src> in every quoting form', () => {
+        const abs = encodeURI(path.resolve('/docs/sub', 'img.png'));
+        for (const tag of ['<img src="img.png" width="200">', "<img src='img.png' width=\"200\">", '<img width="200" src=img.png>']) {
+            const result = rewriteRelativeImagePaths(tag, '/docs/sub');
+            assert.ok(result.includes(`src="${abs}"`), `got: ${result}`);
+            assert.ok(result.includes('width="200"'), `other attributes must survive: ${result}`);
+        }
+    });
+
+    it('leaves an <img> that is already anchored, or has no real src, alone', () => {
+        for (const tag of ['<img src="https://example.com/a.png">', '<img src="/abs/a.png">',
+                           '<img src="data:image/png;base64,AAAA">', '<img data-src="lazy.png">',
+                           '<img src="C:\\docs\\a.png">']) {
+            assert.equal(rewriteRelativeImagePaths(tag, '/docs'), tag);
+        }
+    });
+
+    it('keeps a space in an <img> path resolvable after the rewrite', () => {
+        const result = rewriteRelativeImagePaths('<img src="my%20pics/a.png">', '/docs');
+        const src = /src="([^"]+)"/.exec(result)![1];
+        assert.equal(decodeURIComponent(src), path.resolve('/docs', 'my pics/a.png'));
+    });
+
+    it('leaves a Windows absolute path in markdown syntax alone', () => {
+        const body = '![alt](C:/docs/img.png)';
+        assert.equal(rewriteRelativeImagePaths(body, '/some/dir'), body);
+    });
+
     it('preserves the alt text', () => {
         const result = rewriteRelativeImagePaths('![my alt](img.png)', '/docs');
         assert.ok(result.startsWith('![my alt]'));

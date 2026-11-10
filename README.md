@@ -440,6 +440,11 @@ someone else's repository and pressing <kbd>⌘S</kbd> is enough to start a run.
   refused, and the check runs on the address actually dialled rather than on the
   hostname, so DNS rebinding does not get around it. Opt in per machine with
   `EXPORT_PDF_ALLOW_PRIVATE_HOSTS=1`.
+- **WeasyPrint is held to the same rule.** It fetches anything the exporter did
+  not embed (a `url()` in a `<style>` block, an `@import`, an image whose fetch
+  failed), so it runs with the exporter's local server as its proxy and every
+  request it makes passes the same guard. Proxy variables from your own
+  environment are not handed to it.
 - **Mermaid diagrams cannot reach the network at all.** A diagram label may
   contain HTML, so `A["<img src='https://example.invalid/?x=1'>"]` is an ordinary
   node that a browser would dutifully fetch. Every request the render page makes

@@ -34,15 +34,25 @@ export function isPrivateAddress(ip: string): boolean {
     if (family === 0) return false;
 
     if (family === 6) {
-        const v6 = ip.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0];
-        // An IPv4-mapped address (::ffff:10.0.0.1) reaches the same host as the
-        // v4 form, so it has to be judged as the v4 address it carries.
-        const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(v6);
-        if (mapped) return isPrivateAddress(mapped[1]);
-        if (v6 === '::1' || v6 === '::') return true;           // loopback, unspecified
-        if (/^f[cd][0-9a-f]{2}:/.test(v6)) return true;         // fc00::/7 unique-local
-        if (/^fe[89ab][0-9a-f]:/.test(v6)) return true;         // fe80::/10 link-local
-        if (/^ff[0-9a-f]{2}:/.test(v6))    return true;         // ff00::/8 multicast
+        const h = ipv6Hextets(ip.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0]);
+        if (!h) return true;                                    // unparseable: refuse rather than guess
+
+        // An address that carries an IPv4 one reaches the same host as the v4
+        // form, so it is judged as the v4 address it carries.
+        //
+        // This is decided on the parsed 16-bit groups, never on the text. It
+        // used to be a pattern for the dotted spelling `::ffff:10.0.0.1`, but
+        // `new URL()` rewrites that to `::ffff:a00:1` before anything here sees
+        // it, so `http://[::ffff:127.0.0.1]/` — and the metadata endpoint as
+        // `[::ffff:169.254.169.254]` — walked straight past the guard.
+        const embedded = embeddedIpv4(h);
+        if (embedded) return isPrivateAddress(embedded);
+
+        if (h.every(x => x === 0)) return true;                              // :: unspecified
+        if (h.slice(0, 7).every(x => x === 0) && h[7] === 1) return true;    // ::1 loopback
+        if ((h[0] & 0xfe00) === 0xfc00) return true;            // fc00::/7 unique-local
+        if ((h[0] & 0xffc0) === 0xfe80) return true;            // fe80::/10 link-local
+        if ((h[0] & 0xff00) === 0xff00) return true;            // ff00::/8 multicast
         return false;
     }
 
@@ -58,6 +68,66 @@ export function isPrivateAddress(ip: string): boolean {
     if (a === 198 && (b === 18 || b === 19)) return true;       // 198.18/15 benchmarking
     if (a >= 224)  return true;                                 // multicast + reserved
     return false;
+}
+
+/**
+ * An IPv6 address as its eight 16-bit groups, or null when it does not parse.
+ *
+ * Handles `::` compression and a trailing dotted quad (`::ffff:1.2.3.4`), so
+ * every spelling of one address yields the same eight numbers. The caller has
+ * already confirmed `net.isIP(...) === 6`; null is the belt-and-braces answer.
+ */
+function ipv6Hextets(v6: string): number[] | null {
+    let text = v6;
+    const quad = /^(.*:)(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(text);
+    if (quad) {
+        const [a, b, c, d] = quad.slice(2).map(Number);
+        if ([a, b, c, d].some(n => n > 255)) return null;
+        text = `${quad[1]}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+    }
+    const halves = text.split('::');
+    if (halves.length > 2) return null;
+    const parse = (s: string): number[] => (s === '' ? [] : s.split(':').map(g => parseInt(g, 16)));
+    const head = parse(halves[0]);
+    const tail = halves.length === 2 ? parse(halves[1]) : [];
+    const fill = halves.length === 2 ? 8 - head.length - tail.length : 0;
+    if (fill < 0) return null;
+    const out = [...head, ...new Array<number>(fill).fill(0), ...tail];
+    return out.length === 8 && out.every(n => Number.isInteger(n) && n >= 0 && n <= 0xffff) ? out : null;
+}
+
+/**
+ * The IPv4 address an IPv6 one carries, as dotted text, or null when it carries
+ * none.
+ *
+ * Four transition forms put a v4 address inside a v6 one, and a connection to
+ * any of them can end up at that v4 host: IPv4-mapped (`::ffff:0:0/96`), the
+ * deprecated IPv4-compatible (`::/96`), NAT64 (`64:ff9b::/96`) and 6to4
+ * (`2002::/16`, where the v4 address sits in the second and third groups).
+ */
+function embeddedIpv4(h: number[]): string | null {
+    const dotted = (hi: number, lo: number): string => `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`;
+    const zeroPrefix = h.slice(0, 5).every(x => x === 0);
+    if (zeroPrefix && h[5] === 0xffff) return dotted(h[6], h[7]);                // IPv4-mapped
+    // IPv4-compatible — but `::` and `::1` are addresses of their own.
+    if (zeroPrefix && h[5] === 0 && (h[6] !== 0 || h[7] > 1)) return dotted(h[6], h[7]);
+    if (h[0] === 0x64 && h[1] === 0xff9b && h.slice(2, 6).every(x => x === 0))   // NAT64
+        return dotted(h[6], h[7]);
+    if (h[0] === 0x2002) return dotted(h[1], h[2]);                              // 6to4
+    return null;
+}
+
+/**
+ * Throws {@link BlockedHostError} when `host` is a literal address in a refused
+ * range. A hostname passes: it is judged when it resolves, by {@link guardedLookup}.
+ *
+ * Exported for the WeasyPrint proxy (`weasyprint.ts`), which dials hosts itself
+ * and must apply the same literal-address rule the fetcher does.
+ */
+export function assertPublicHostname(hostname: string): void {
+    if (CONFIG.allowPrivateHosts) return;
+    const host = hostname.replace(/^\[|\]$/g, '');
+    if (net.isIP(host) && isPrivateAddress(host)) throw new BlockedHostError(hostname, host);
 }
 
 /** Thrown when a URL resolves into a range {@link isPrivateAddress} refuses. */
@@ -113,9 +183,7 @@ export const guardedLookup: net.LookupFunction = (hostname, options, callback) =
  * already an address, so `http://169.254.169.254/` would go straight out.
  */
 function assertPublicHost(url: URL): void {
-    if (CONFIG.allowPrivateHosts) return;
-    const host = url.hostname.replace(/^\[|\]$/g, '');
-    if (net.isIP(host) && isPrivateAddress(host)) throw new BlockedHostError(url.hostname, host);
+    assertPublicHostname(url.hostname);
 }
 
 /**

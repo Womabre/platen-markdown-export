@@ -32,6 +32,26 @@ export function windowsAppDir(
 }
 
 /**
+ * The file a write to `filePath` should actually land on: the target of a
+ * symlink, or `filePath` itself.
+ *
+ * `rename(2)` replaces the *name* it is given. Renaming a temp file onto a
+ * symlink therefore replaces the link with a regular file and leaves the file
+ * it pointed at untouched — so the first export that stamped a revision date
+ * on a symlinked document (a file kept in one repository and linked into
+ * another, a dotfile manager, a synced folder) silently turned the link into a
+ * diverging copy. Writing through the link, to its target, is what
+ * `writeFileSync` always did and what an atomic write has to do deliberately.
+ *
+ * A path that does not exist yet, or a link whose target is missing, resolves
+ * to itself: there is nothing to preserve.
+ */
+export function resolveWriteTarget(filePath: string): string {
+    try { return fs.realpathSync(filePath); }
+    catch { return filePath; }
+}
+
+/**
  * Path for a temp file that can be renamed onto `filePath`.
  *
  * A dot-file in the destination's own directory: it has to share a filesystem
@@ -75,6 +95,9 @@ export function commitFileAtomic(tempPath: string, filePath: string): void {
  * The temp file is removed on any failure, leaving the destination as it was.
  */
 export function writeFileAtomic(filePath: string, data: string): void {
+    // Through a symlink, not over it — see `resolveWriteTarget`. The temp file
+    // sits beside the real target so the rename stays on one filesystem.
+    filePath = resolveWriteTarget(filePath);
     const tmp = tempSiblingPath(filePath);
 
     try {

@@ -141,6 +141,43 @@ describe('writeFileAtomic', () => {
         assert.equal(fs.readFileSync(target, 'utf8'), 'original');
     }));
 
+    // rename() replaces the name it is given, so writing "atomically" onto a
+    // symlink used to swap the link for a regular file and leave the document it
+    // pointed at unchanged.
+    it('writes through a symlink instead of replacing it', { skip: process.platform === 'win32' }, () => withTmpDir(dir => {
+        const real = path.join(dir, 'real.md');
+        const link = path.join(dir, 'link.md');
+        fs.writeFileSync(real, 'old', 'utf8');
+        fs.symlinkSync(real, link);
+
+        writeFileAtomic(link, 'new');
+
+        assert.equal(fs.lstatSync(link).isSymbolicLink(), true, 'the link must still be a link');
+        assert.equal(fs.readFileSync(real, 'utf8'), 'new', 'the target must receive the write');
+        assert.deepEqual(fs.readdirSync(dir).sort(), ['link.md', 'real.md']);
+    }));
+
+    it('puts the temp file beside a symlink\'s target, not beside the link', { skip: process.platform === 'win32' }, () => withTmpDir(dir => {
+        fs.mkdirSync(path.join(dir, 'elsewhere'));
+        const real = path.join(dir, 'elsewhere', 'real.md');
+        const link = path.join(dir, 'link.md');
+        fs.writeFileSync(real, 'old', 'utf8');
+        fs.symlinkSync(real, link);
+
+        writeFileAtomic(link, 'new');
+
+        assert.equal(fs.readFileSync(real, 'utf8'), 'new');
+        assert.deepEqual(fs.readdirSync(dir).sort(), ['elsewhere', 'link.md']);
+        assert.deepEqual(fs.readdirSync(path.join(dir, 'elsewhere')), ['real.md']);
+    }));
+
+    it('still creates a file through a dangling symlink\'s own path', { skip: process.platform === 'win32' }, () => withTmpDir(dir => {
+        const link = path.join(dir, 'link.md');
+        fs.symlinkSync(path.join(dir, 'missing.md'), link);
+        writeFileAtomic(link, 'new');
+        assert.equal(fs.readFileSync(link, 'utf8'), 'new');
+    }));
+
     it('round-trips UTF-8 content', () => withTmpDir(dir => {
         const target = path.join(dir, 'doc.md');
         const body   = '# Café — naïve ✓\n\nBøx\n';
