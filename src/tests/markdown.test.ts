@@ -501,6 +501,64 @@ describe('resolveIncludes — non-markdown and line ranges', () => {
         assert.equal(resolveIncludes('[!include](nope.ts)', dir), '[!include](nope.ts)');
         fs.rmSync(dir, { recursive: true, force: true });
     });
+
+    it('leaves the directive untouched when the target is a directory, rather than crashing', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'inc-'));
+        fs.mkdirSync(path.join(dir, 'sub'));
+        assert.equal(resolveIncludes('[!include](sub)', dir), '[!include](sub)');
+        assert.equal(resolveIncludes('[!include](sub "xml")', dir), '[!include](sub "xml")');
+        fs.rmSync(dir, { recursive: true, force: true });
+    });
+});
+
+describe('resolveIncludes — fenced code is left alone', () => {
+    let dir: string;
+    before(() => {
+        dir = fs.mkdtempSync(path.join(os.tmpdir(), 'inc-fence-'));
+        fs.writeFileSync(path.join(dir, 'b.md'), 'SPLICED\n');
+    });
+    after(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+    it('does not expand a directive inside a backtick fence', () => {
+        const src = '```md\n[!include](b.md)\n```\n';
+        assert.equal(resolveIncludes(src, dir), src);
+    });
+
+    it('does not expand a directive inside a tilde fence', () => {
+        const src = '~~~\n[!include](b.md)\n~~~\n';
+        assert.equal(resolveIncludes(src, dir), src);
+    });
+
+    it('still expands a directive after the fence closes', () => {
+        const out = resolveIncludes('```\n[!include](b.md)\n```\n\n[!include](b.md)\n', dir);
+        assert.equal(out.match(/SPLICED/g)?.length, 1);
+        assert.match(out, /```\n\[!include\]\(b\.md\)\n```/);
+    });
+
+    it('needs a closing fence at least as long as the opener', () => {
+        const src = '````\n```\n[!include](b.md)\n````\n';
+        assert.equal(resolveIncludes(src, dir), src);
+    });
+
+    it('does not close a backtick fence with tildes', () => {
+        const src = '```\n~~~\n[!include](b.md)\n```\n';
+        assert.equal(resolveIncludes(src, dir), src);
+    });
+
+    it('treats an unclosed fence as running to the end', () => {
+        const src = '```\n[!include](b.md)\n';
+        assert.equal(resolveIncludes(src, dir), src);
+    });
+
+    it('closes a fence in a CRLF document', () => {
+        const out = resolveIncludes('```\r\nx\r\n```\r\n[!include](b.md)\n', dir);
+        assert.match(out, /SPLICED/);
+    });
+
+    it('does not mistake inline backticks for a fence opener', () => {
+        const out = resolveIncludes('``` not a fence ` here\n[!include](b.md)\n', dir);
+        assert.match(out, /SPLICED/);
+    });
 });
 
 // ── Variables & conditional content ───────────────────────────────────────────

@@ -166,29 +166,6 @@ export function rewriteRelativeImagePaths(body: string, fromDir: string): string
 }
 
 /**
- * Replaces `[!include](path/to/file.md)` directives with the content of the
- * referenced file (frontmatter stripped). Recurses into included files and
- * guards against circular references.
- *
- * Relative image paths in included content are rewritten to absolute paths so
- * that they resolve correctly when the merged document is rendered from its own
- * directory.
- *
- * The directive must appear on its own line. Paths are resolved relative to
- * the directory of the file that contains the directive.
- *
- * A markdown link title overrides the syntax-highlighting language, for files
- * whose extension does not identify their content — `Main.config` is really
- * XML, `.rc` might be INI:
- *
- *     [!include](Main.config "xml")
- *     [!include](Main.config#L5-L40 "xml")
- *
- * Because an explicit language only makes sense for a code block, giving one
- * also FORCES code-block treatment — which is how a `.md` file can be quoted
- * as source rather than spliced in as markdown.
- */
-/**
  * How deep `[!include]` may nest.
  *
  * The cycle guard alone does not bound the work. `visited` is copied per branch
@@ -203,6 +180,79 @@ export function rewriteRelativeImagePaths(body: string, fromDir: string): string
 const MAX_INCLUDE_DEPTH = 16;
 
 /**
+ * Applies `transform` to every part of `body` that lies outside a fenced code
+ * block, and passes the fenced parts through untouched.
+ *
+ * Line-based and CommonMark-shaped: a fence opens on a line indented at most
+ * three spaces with three or more backticks or tildes, and closes on a line of
+ * the same character, at least as long, with nothing after it but whitespace.
+ * An unclosed fence runs to the end of the text, as it does in markdown-it.
+ * Segments are cut at line boundaries, so `^`/`$` with the `m` flag keep
+ * meaning "start/end of a line" inside `transform`.
+ *
+ * This exists because `[!include]` was expanded everywhere, including inside a
+ * code block that only *shows* the syntax: a README documenting the feature got
+ * the referenced file spliced into its example.
+ */
+export function outsideFences(body: string, transform: (text: string) => string): string {
+    const lines = body.split('\n');
+    const out: string[] = [];
+    let plain: string[] = [];
+    let fence: { char: string; len: number } | null = null;
+
+    const flushPlain = (): void => {
+        if (plain.length) out.push(transform(plain.join('\n')));
+        plain = [];
+    };
+
+    for (const line of lines) {
+        if (fence) {
+            out.push(line);
+            // `\r` too: a CRLF file split on `\n` keeps it, and a fence that
+            // never closed would silently disable every include after it.
+            const close = /^ {0,3}(`{3,}|~{3,})[ \t\r]*$/.exec(line);
+            if (close && close[1][0] === fence.char && close[1].length >= fence.len) fence = null;
+            continue;
+        }
+        const open = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+        // A backtick fence's info string may not contain a backtick (CommonMark 4.5).
+        if (open && !(open[1][0] === '`' && line.slice(open[0].length).includes('`'))) {
+            flushPlain();
+            out.push(line);
+            fence = { char: open[1][0], len: open[1].length };
+            continue;
+        }
+        plain.push(line);
+    }
+    flushPlain();
+    return out.join('\n');
+}
+
+/**
+ * Replaces `[!include](path/to/file.md)` directives with the content of the
+ * referenced file (frontmatter stripped). Recurses into included files and
+ * guards against circular references.
+ *
+ * Relative image paths in included content are rewritten to absolute paths so
+ * that they resolve correctly when the merged document is rendered from its own
+ * directory.
+ *
+ * The directive must appear on its own line, outside any fenced code block.
+ * Paths are resolved relative to the directory of the file that contains the
+ * directive. A target that is missing or is not a regular file (a directory)
+ * is left as written, with a warning.
+ *
+ * A markdown link title overrides the syntax-highlighting language, for files
+ * whose extension does not identify their content — `Main.config` is really
+ * XML, `.rc` might be INI:
+ *
+ *     [!include](Main.config "xml")
+ *     [!include](Main.config#L5-L40 "xml")
+ *
+ * Because an explicit language only makes sense for a code block, giving one
+ * also FORCES code-block treatment — which is how a `.md` file can be quoted
+ * as source rather than spliced in as markdown.
+ *
  * @param deps Optional accumulator for every file actually read. `--watch` uses
  *             it to watch the documents an export depends on, not just the one
  *             it was pointed at.
@@ -218,7 +268,7 @@ export function resolveIncludes(
         log(`WARNING: Include nesting deeper than ${MAX_INCLUDE_DEPTH} levels — not expanding further`);
         return body;
     }
-    return body.replace(
+    return outsideFences(body, text => text.replace(
         /^[ \t]*\[!include\]\(([^)#"']+?)(#L\d+(?:-L?\d+)?)?(?:[ \t]+["']([^"']*)["'])?\)[ \t]*$/gim,
         (_match, filePath: string, fragment: string | undefined, langOverride: string | undefined) => {
             const absPath = path.resolve(baseDir, filePath.trim());
@@ -228,8 +278,12 @@ export function resolveIncludes(
             if (fragment && !range) {
                 log(`WARNING: Malformed line range "${fragment}", including whole file: ${absPath}`);
             }
-            if (!fs.existsSync(absPath)) {
-                log(`WARNING: Include file not found, skipping: ${absPath}`);
+            let isFile = false;
+            try { isFile = fs.statSync(absPath).isFile(); } catch { /* missing or unreadable */ }
+            if (!isFile) {
+                log(fs.existsSync(absPath)
+                    ? `WARNING: Include target is not a file, skipping: ${absPath}`
+                    : `WARNING: Include file not found, skipping: ${absPath}`);
                 return _match;
             }
 
@@ -271,7 +325,7 @@ export function resolveIncludes(
             }
             return `<div style="page-break-before: always;"></div>\n\n${rewriteRelativeImagePaths(resolved, childDir)}`;
         },
-    );
+    ));
 }
 
 interface LineRange { from: number; to: number }

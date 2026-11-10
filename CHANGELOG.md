@@ -8,6 +8,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-10
+
+### Fixed
+
+- **`[!include]` no longer expands inside fenced code blocks.** A document that
+  showed the syntax in a code block, such as a README documenting the feature,
+  got the referenced file spliced into its example. Directives are now only
+  resolved outside backtick and tilde fences (CommonMark rules for opening and
+  closing, CRLF files included).
+- **An `[!include]` pointing at a directory is skipped with a warning** instead
+  of crashing the export with `EISDIR` and exit code 1.
+
 ### Added
 
 - **The VS Code extension publishes itself to the Marketplace.** A new
