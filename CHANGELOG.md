@@ -18,10 +18,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `@types/node`, `@types/vscode`, `@vscode/vsce` 4.1.1, which needs Node 22 to
   package the extension). Playwright 1.65 uses a newer Chromium for Mermaid
   diagrams: run `platen-markdown-export --setup` once to fetch it.
-- `mermaid` stays on 11 and `typescript` on 6. Mermaid 12 redraws every
-  flowchart with right-angled edges and wider nodes, and its new default look
-  prints with blue borders in WeasyPrint; `typescript-eslint` does not accept
-  TypeScript 7 yet.
+- **Mermaid 12.** `mermaid` 11.17.2 to 12.3.0. Flowcharts are drawn
+  differently: edges run in right-angled segments with rounded corners instead
+  of smooth curves, and nodes are wider. Other diagram types look as before.
+  Mermaid 12's new default look (`neo`) is not used: it strokes nodes with an
+  SVG gradient that WeasyPrint prints as solid blue, so the exporter pins the
+  `classic` look.
+- `typescript` stays on 6: `typescript-eslint` does not accept TypeScript 7
+  yet.
 
 ### Fixed
 
@@ -29,8 +33,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   plugin carried its own older KaTeX (0.16) while the stylesheet and fonts came
   from the project's copy. KaTeX 0.19 renamed the classes its markup uses, so
   the two have to match; an `overrides` entry now makes the plugin use the
-  project's KaTeX. This also removes the last advisory against a production
-  dependency that had a fix.
+  project's KaTeX. Together with Mermaid 12 this clears every advisory
+  against a production dependency.
 
 ## [1.5.3] - 2026-11-17
 

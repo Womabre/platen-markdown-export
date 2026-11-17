@@ -95,6 +95,12 @@ export function mermaidPlaceholder(diagramSource: string): string {
  *  - Every interpolated value goes through {@link jsonForScript}, so a node
  *    label containing `</script>` cannot end the element early.
  *
+ * `look: 'classic'` is pinned because mermaid 12 made `neo` the default look,
+ * and neo strokes every node with an SVG gradient under a `drop-shadow` filter.
+ * WeasyPrint paints that gradient stroke solid blue and draws no shadow, so
+ * every flowchart, class and state diagram came out of the PDF with bright blue
+ * borders. Classic is the flat look mermaid 11 drew, and prints as designed.
+ *
  * The page needs no network at all — the bundle is inlined here and the content
  * arrives via `setContent` — which is what lets the caller abort every request.
  */
@@ -106,7 +112,7 @@ export function buildMermaidPage(bundle: string, id: string, code: string): stri
 <div id="container"></div>
 <script>
 ${bundle}
-mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'strict' });
+mermaid.initialize({ startOnLoad: false, theme: 'neutral', look: 'classic', securityLevel: 'strict' });
 mermaid.render(${jsonForScript(id)}, ${jsonForScript(code)})
     .then(function(r) {
         document.getElementById('container').innerHTML = r.svg;

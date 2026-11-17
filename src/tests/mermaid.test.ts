@@ -56,6 +56,12 @@ describe('mermaidPlaceholder', () => {
 describe('buildMermaidPage', () => {
     const page = (code = 'graph TD\n  A --> B') => buildMermaidPage('/*BUNDLE*/', 'mermaid-diag-1', code);
 
+    it("pins the classic look, because WeasyPrint prints neo's gradient borders blue", () => {
+        // mermaid 12's default look strokes nodes with `url(#…-gradient)`.
+        // Nothing fails without this pin: the diagrams just print wrong.
+        assert.match(page(), /look:\s*'classic'/);
+    });
+
     it("initialises mermaid at securityLevel 'strict'", () => {
         assert.match(page(), /securityLevel:\s*'strict'/);
     });
