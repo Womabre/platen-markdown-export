@@ -2,7 +2,7 @@
   "name": "platen-markdown-export-vscode",
   "displayName": "Platen Markdown Export",
   "description": "Export Markdown (or HTML) to print-quality PDF / standalone HTML via the platen-markdown-export CLI.",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "license": "MIT",
   "private": true,
   "publisher": "Womabre",
@@ -37,7 +37,7 @@
     "commands": [
       {
         "command": "platenMarkdownExport.export",
-        "title": "Export (Markdown \u2192 PDF/HTML)",
+        "title": "Export (Markdown → PDF/HTML)",
         "category": "Platen Markdown Export"
       },
       {
@@ -62,7 +62,7 @@
       },
       {
         "command": "platenMarkdownExport.frontmatterWizard",
-        "title": "Frontmatter Wizard (fill in this document)\u2026",
+        "title": "Frontmatter Wizard (fill in this document)…",
         "category": "Platen Markdown Export"
       },
       {
@@ -72,17 +72,17 @@
       },
       {
         "command": "platenMarkdownExport.newDocument",
-        "title": "New Document with Frontmatter Wizard\u2026",
+        "title": "New Document with Frontmatter Wizard…",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.selectTheme",
-        "title": "Select Theme\u2026",
+        "title": "Select Theme…",
         "category": "Platen Markdown Export"
       },
       {
         "command": "platenMarkdownExport.addThemeFolder",
-        "title": "Add External Theme Folder\u2026",
+        "title": "Add External Theme Folder…",
         "category": "Platen Markdown Export"
       },
       {
@@ -293,7 +293,7 @@
         "platenMarkdownExport.strict": {
           "type": "boolean",
           "default": false,
-          "description": "Fail the export if it raised any warning \u2014 a missing image, an unresolved include, a font that failed to fetch. The output is still written; the run is reported as failed. Maps to --strict."
+          "description": "Fail the export if it raised any warning — a missing image, an unresolved include, a font that failed to fetch. The output is still written; the run is reported as failed. Maps to --strict."
         },
         "platenMarkdownExport.noBump": {
           "type": "boolean",
@@ -312,7 +312,7 @@
           },
           "default": [],
           "scope": "machine",
-          "markdownDescription": "Additional raw CLI arguments appended to every export.\n\nUser-settable only (`machine` scope): it is an unchecked passthrough to the command line. The per-project knobs \u2014 `theme`, `mode`, `stylesheet`, `dpi` \u2014 stay workspace-settable."
+          "markdownDescription": "Additional raw CLI arguments appended to every export.\n\nUser-settable only (`machine` scope): it is an unchecked passthrough to the command line. The per-project knobs — `theme`, `mode`, `stylesheet`, `dpi` — stay workspace-settable."
         },
         "platenMarkdownExport.env": {
           "type": "object",
@@ -326,7 +326,7 @@
         "platenMarkdownExport.exportOnSave": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Automatically export whenever a Markdown file that declares a `Mode:` frontmatter key is saved \u2014 no VS Code task/keybinding setup needed. Files without a `Mode:` key (READMEs, notes) are skipped entirely, unless `platenMarkdownExport.mode` forces one. Uses the same settings as the manual Export command, with one difference: a save-triggered export passes `--no-revision-bump`, so it stamps the revision date but never cuts a release. Releasing a `Status: Released` document stays an explicit Export. Rapid saves are debounced into a single run."
+          "markdownDescription": "Automatically export whenever a Markdown file that declares a `Mode:` frontmatter key is saved — no VS Code task/keybinding setup needed. Files without a `Mode:` key (READMEs, notes) are skipped entirely, unless `platenMarkdownExport.mode` forces one. Uses the same settings as the manual Export command, with one difference: a save-triggered export passes `--no-revision-bump`, so it stamps the revision date but never cuts a release. Releasing a `Status: Released` document stays an explicit Export. Rapid saves are debounced into a single run."
         }
       }
     }
@@ -346,7 +346,7 @@
     "@types/node": "^26.4.1",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^3.1.0",
-    "@vscode/vsce": "^3.2.0",
+    "@vscode/vsce": "^4.1.1",
     "eslint": "^10.9.1",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.68.0"

@@ -8,6 +8,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-11-17
+
+### Changed
+
+- **Dependencies updated.** `katex` 0.19.1, `playwright` 1.65.1,
+  `@hpcc-js/wasm-graphviz` 1.30.0, `markdown-it-anchor` 10.1.0, and the
+  development tooling (`eslint` 10.15.0, `typescript-eslint` 8.72.2,
+  `@types/node`, `@types/vscode`, `@vscode/vsce` 4.1.1, which needs Node 22 to
+  package the extension). Playwright 1.65 uses a newer Chromium for Mermaid
+  diagrams: run `platen-markdown-export --setup` once to fetch it.
+- `mermaid` stays on 11 and `typescript` on 6. Mermaid 12 redraws every
+  flowchart with right-angled edges and wider nodes, and its new default look
+  prints with blue borders in WeasyPrint; `typescript-eslint` does not accept
+  TypeScript 7 yet.
+
+### Fixed
+
+- **Formulas are rendered by the same KaTeX that styles them.** The math
+  plugin carried its own older KaTeX (0.16) while the stylesheet and fonts came
+  from the project's copy. KaTeX 0.19 renamed the classes its markup uses, so
+  the two have to match; an `overrides` entry now makes the plugin use the
+  project's KaTeX. This also removes the last advisory against a production
+  dependency that had a fix.
+
 ## [1.5.3] - 2026-11-17
 
 ### Security
