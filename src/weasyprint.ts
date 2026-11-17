@@ -106,6 +106,11 @@ export function startServer(htmlFile: string, options: ServeOptions = {}): Promi
             } catch {
                 res.writeHead(400); res.end(); return;
             }
+            // A NUL can never be part of a filename, and `fs.readFile` throws on
+            // one *synchronously* — inside this handler, where nothing catches
+            // it. `<img src="a%00.png">` in a document therefore killed the whole
+            // export with a stack trace, and left WeasyPrint running without us.
+            if (decoded.includes('\0')) { res.writeHead(400); res.end(); return; }
             const filePath = path.join(baseDir, decoded);
             const rel = path.relative(baseDir, filePath);
             if (rel.startsWith('..') || path.isAbsolute(rel)) {
@@ -156,7 +161,19 @@ export function startServer(htmlFile: string, options: ServeOptions = {}): Promi
             );
         };
 
-        const server = http.createServer((req, res) => {
+        // A request is input a document chose, so nothing it does may take the
+        // process down: whatever a handler throws becomes a 500 for that one
+        // request, and the export carries on.
+        const answer = (res: http.ServerResponse, serve: () => void): void => {
+            try { serve(); }
+            catch (err: unknown) {
+                log(`Could not serve a request WeasyPrint made: ${err instanceof Error ? err.message : String(err)}`);
+                if (!res.headersSent) res.writeHead(500);
+                res.end();
+            }
+        };
+
+        const server = http.createServer((req, res) => answer(res, () => {
             const target = req.url ?? '/';
             // Origin-form (`/path`): a direct request. Absolute-form
             // (`http://host/path`): this server being used as a proxy.
@@ -176,7 +193,7 @@ export function startServer(htmlFile: string, options: ServeOptions = {}): Promi
                 return;
             }
             relay(url, req, res);
-        });
+        }));
 
         // `https://` through a proxy is a CONNECT to `host:port`, then TLS the
         // proxy cannot see into. What it can do — and all the guard needs — is
@@ -409,6 +426,58 @@ export async function probeColorEmojiRendering(weasyprintPath: string): Promise<
 }
 
 /**
+ * The only URL schemes WeasyPrint may fetch: the document and its assets over
+ * the local server (`http`), remote assets through that server as a proxy
+ * (`http`, `https`), and everything the pipeline inlined (`data`).
+ *
+ * What this leaves out is `file:`. The proxy guards the network, but WeasyPrint
+ * reads a `file://` URL straight off the disk without asking anyone, and it
+ * will embed what it reads: `<link rel="attachment" href="file:///…/id_rsa">`
+ * put any file the user could read into the PDF as an attachment no page shows.
+ * Exporting a document someone sent you and returning the PDF was enough to
+ * hand them the file. A document's own assets never needed the scheme — they
+ * are relative references, served over `http` from its directory.
+ */
+export const WEASYPRINT_ALLOWED_PROTOCOLS = 'http,https,data';
+
+/**
+ * Whether this WeasyPrint has `--allowed-protocols`.
+ *
+ * Asked of the binary's own `--help` rather than inferred from a version
+ * number: an unknown flag is a usage error, so passing it to a WeasyPrint that
+ * lacks it would break every export on that machine. Cached per path for the
+ * life of the process, like the colour-emoji probe. A binary that cannot even
+ * print its help counts as "no"; the export itself will say why.
+ */
+const _allowedProtocolsSupport = new Map<string, Promise<boolean>>();
+
+export function allowedProtocolsSupported(weasyprintPath: string): Promise<boolean> {
+    let cached = _allowedProtocolsSupport.get(weasyprintPath);
+    if (!cached) {
+        cached = new Promise<boolean>(resolve => {
+            execFile(weasyprintPath, ['--help'], { timeout: 15_000 }, (error, stdout) => {
+                resolve(!error && stdout.includes('--allowed-protocols'));
+            });
+        });
+        _allowedProtocolsSupport.set(weasyprintPath, cached);
+    }
+    return cached;
+}
+
+/**
+ * The URLs WeasyPrint refused under `--allowed-protocols`, from its stderr.
+ *
+ * WeasyPrint reports a refusal as an ordinary `ERROR:` line and carries on, so
+ * without this a blocked `file://` reference would be one more line of stderr
+ * and `--strict` would pass a document that tried to read the disk. Exported
+ * for testing.
+ */
+export function disallowedProtocolUrls(stderr: string): string[] {
+    const urls = [...stderr.matchAll(/URI uses disallowed protocol: (\S+)/g)].map(m => m[1]);
+    return [...new Set(urls)];
+}
+
+/**
  * Builds the WeasyPrint argv, exported so the mapping from options to flags is
  * testable without a child process. `--pdf-variant` is omitted entirely when
  * null (an ordinary PDF) rather than passed as some "none" sentinel WeasyPrint
@@ -419,8 +488,10 @@ export function buildWeasyprintArgs(
     tmpPdf: string,
     dpi: number,
     pdfVariant: string | null,
+    restrictProtocols = false,
 ): string[] {
     const args = ['--optimize-images', '--dpi', String(dpi)];
+    if (restrictProtocols) args.push('--allowed-protocols', WEASYPRINT_ALLOWED_PROTOCOLS);
     if (pdfVariant) args.push('--pdf-variant', pdfVariant);
     args.push(url, tmpPdf);
     return args;
@@ -457,6 +528,7 @@ export function exportPdf(
     dpi: number = CONFIG.weasyprintDpi,
     pdfVariant: string | null = CONFIG.pdfVariant,
     proxyUrl: string | null = null,
+    restrictProtocols = false,
 ): Promise<void> {
     log('Launching WeasyPrint...');
 
@@ -474,12 +546,41 @@ export function exportPdf(
     };
 
     return new Promise((resolve, reject) => {
-        execFile(
+        // WeasyPrint outlives us if we die first: it is a separate process that
+        // finishes its render and writes the temp file into the user's folder
+        // with nobody left to rename or remove it. So for as long as it runs,
+        // our own exit takes it along — on `process.exit` (how `--watch` stops)
+        // and on the signals an editor or a Ctrl-C sends.
+        const abandon = (): void => { child.kill(); discardTemp(); };
+        const onSignal = (signal: NodeJS.Signals): void => {
+            abandon();
+            release();
+            // Hand the signal back so the process ends the way it would have.
+            // Another listener (the watch loop's) may already be exiting.
+            if (process.listenerCount(signal) === 0) process.kill(process.pid, signal);
+        };
+        const release = (): void => {
+            process.off('exit', abandon);
+            process.off('SIGINT', onSignal);
+            process.off('SIGTERM', onSignal);
+        };
+        process.once('exit', abandon);
+        process.once('SIGINT', onSignal);
+        process.once('SIGTERM', onSignal);
+
+        const child = execFile(
             weasyprintPath,
-            buildWeasyprintArgs(url, tmpPdf, dpi, pdfVariant),
+            buildWeasyprintArgs(url, tmpPdf, dpi, pdfVariant, restrictProtocols),
             { maxBuffer: 50 * 1024 * 1024, env: buildWeasyprintEnv(process.env, proxyUrl) },
             (error, stdout, stderr) => {
+                release();
                 if (stdout) log(`stdout: ${stdout}`);
+
+                for (const blocked of disallowedProtocolUrls(stderr)) {
+                    const shown = blocked.length > 120 ? `${blocked.slice(0, 120)}…` : blocked;
+                    log(`WARNING: Blocked a URL WeasyPrint was asked to read: ${shown} — ` +
+                        `only ${WEASYPRINT_ALLOWED_PROTOCOLS} are fetched, never a file:// path`);
+                }
 
                 if (stderr) {
                     const { errors, warnings, suppressedCount } = categorizeStderr(stderr);

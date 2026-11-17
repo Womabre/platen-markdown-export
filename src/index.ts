@@ -28,7 +28,7 @@ import type { InfographicIconProvider } from './config';
 import { renderDrawioDiagrams } from './drawio';
 import { applyCaptions, markDenseTables } from './markdown-extras';
 import { documentLabels }           from './labels';
-import { startServer, exportPdf, colorEmojiRenderingSupported } from './weasyprint';
+import { startServer, exportPdf, colorEmojiRenderingSupported, allowedProtocolsSupported } from './weasyprint';
 import { startWatch }             from './watch';
 import { spawn } from 'child_process';
 import { validate }                 from './validate';
@@ -419,11 +419,19 @@ async function runExport(htmlContent: string, opts: ExportOptions): Promise<void
         log(`Temp file kept for inspection: ${debugFile}`);
     }
 
+    // The proxy below guards the network; this guards the disk. A WeasyPrint
+    // too old to restrict its schemes still exports, but a document that names
+    // a `file:` URL is then reported — that is the one thing it could abuse.
+    const restrictProtocols = await allowedProtocolsSupported(weasyprintPath);
+    if (!restrictProtocols && /file:/i.test(htmlContent))
+        log('WARNING: This WeasyPrint cannot restrict URL schemes (no --allowed-protocols), and the document ' +
+            'mentions a file: URL — a file:// reference can embed a local file in the PDF. Update WeasyPrint.');
+
     const { server, urlFor, proxyUrl } = await startServer(htmlFile, { files: { [servedName]: htmlContent } });
     try {
         // The server doubles as WeasyPrint's proxy, so anything the pipeline
         // left un-inlined is fetched under the same guard as everything else.
-        await exportPdf(weasyprintPath, urlFor(servedName), pdfFile, dpi, pdfVariant, proxyUrl);
+        await exportPdf(weasyprintPath, urlFor(servedName), pdfFile, dpi, pdfVariant, proxyUrl, restrictProtocols);
         const elapsedS = ((Date.now() - opts.startMs) / 1000).toFixed(1);
         logResult(`${summarizePdf(pdfFile)} in ${elapsedS} s`);
         if (open) openFile(pdfFile);

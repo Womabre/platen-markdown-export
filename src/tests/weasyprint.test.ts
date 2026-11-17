@@ -5,7 +5,8 @@ import * as os   from 'os';
 import * as path from 'path';
 import * as http from 'http';
 import { startServer, categorizeStderr, exportPdf, explainWeasyprintFailure, buildWeasyprintArgs,
-         probeColorEmojiRendering, colorEmojiRenderingSupported, buildWeasyprintEnv } from '../weasyprint';
+         probeColorEmojiRendering, colorEmojiRenderingSupported, buildWeasyprintEnv,
+         allowedProtocolsSupported, disallowedProtocolUrls, WEASYPRINT_ALLOWED_PROTOCOLS } from '../weasyprint';
 import { CONFIG } from '../config';
 import { tempSiblingPath, commitFileAtomic, writeFileAtomic } from '../fsutil';
 
@@ -691,5 +692,55 @@ describe('explainWeasyprintFailure', () => {
     it('handles a single-line stderr with no traceback at all', () => {
         assert.equal(explainWeasyprintFailure('weasyprint: error: unrecognized arguments', 'x'),
                      'weasyprint: error: unrecognized arguments');
+    });
+});
+
+// ── file:// is never fetched ──────────────────────────────────────────────────
+
+describe('WeasyPrint URL schemes', () => {
+    it('allows the schemes the pipeline uses and not file', () => {
+        // `data` has to be there: everything the pipeline inlines is a data URI,
+        // and WeasyPrint judges those by the same list.
+        assert.deepEqual(WEASYPRINT_ALLOWED_PROTOCOLS.split(','), ['http', 'https', 'data']);
+    });
+
+    it('passes --allowed-protocols only when asked to restrict', () => {
+        const args = buildWeasyprintArgs('http://x/doc', '/tmp/out.pdf', 300, null, true);
+        const at = args.indexOf('--allowed-protocols');
+        assert.ok(at !== -1 && at < args.indexOf('http://x/doc'));
+        assert.equal(args[at + 1], WEASYPRINT_ALLOWED_PROTOCOLS);
+        assert.ok(!buildWeasyprintArgs('http://x/doc', '/tmp/out.pdf', 300, null).includes('--allowed-protocols'));
+    });
+
+    it('reads each refused URL out of stderr once', () => {
+        const stderr = [
+            'ERROR: Failed to load attachment: ValueError: URI uses disallowed protocol: file:///etc/passwd',
+            'WARNING: something unrelated',
+            'ERROR: Failed to load attachment: ValueError: URI uses disallowed protocol: file:///etc/passwd',
+            "ERROR: Failed to load image at 'file:///a.png': ValueError: URI uses disallowed protocol: file:///a.png",
+        ].join('\n');
+        assert.deepEqual(disallowedProtocolUrls(stderr), ['file:///etc/passwd', 'file:///a.png']);
+        assert.deepEqual(disallowedProtocolUrls('WARNING: nothing refused'), []);
+    });
+
+    it('reports no support for a binary whose help does not name the flag', async () => {
+        // Node stands in for a WeasyPrint too old to have it: it prints a help
+        // text, exits 0, and that text has no such option.
+        assert.equal(await allowedProtocolsSupported(process.execPath), false);
+        assert.equal(await allowedProtocolsSupported(path.join(os.tmpdir(), 'no-such-weasyprint')), false);
+    });
+});
+
+describe('startServer and hostile request paths', () => {
+    it('answers a NUL byte in the path with 400 instead of crashing', async () => {
+        // fs.readFile throws synchronously on a NUL. In the request handler that
+        // was an uncaught exception: `<img src="a%00.png">` ended the export.
+        const { server, port, token } = await startServer(path.join(tmpDir, 'page.html'));
+        try {
+            const { status } = await get(port, `/${token}/a%00.png`);
+            assert.equal(status, 400);
+            // And the server is still there for the next request.
+            assert.equal((await get(port, `/${token}/page.html`)).status, 200);
+        } finally { server.close(); }
     });
 });

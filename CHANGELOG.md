@@ -8,6 +8,34 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-11-17
+
+### Security
+
+- **A document can no longer make WeasyPrint read a local file.** The proxy
+  added in 1.5.2 guards the network, but WeasyPrint reads a `file://` URL
+  straight off the disk, and embeds what it reads. A document containing
+  `<link rel="attachment" href="file:///…">` put any file the exporting user
+  could read into the PDF as an attachment that no page shows, so exporting a
+  document someone sent you and returning the PDF could hand them that file.
+  WeasyPrint is now started with `--allowed-protocols http,https,data`. A
+  refused URL is logged as a warning, so `--strict` refuses the export. A
+  document's own assets are unaffected: they are relative references served
+  over `http`. On a WeasyPrint without that option the export still runs, and
+  warns when the document mentions a `file:` URL.
+
+### Fixed
+
+- **An encoded NUL byte in an asset URL no longer crashes the export.**
+  `<img src="a%00.png">` ended the run with a stack trace: the local server
+  passed the decoded path to `fs.readFile`, which throws on a NUL. Such a
+  request now gets a 400, and anything else a request handler throws becomes a
+  500 for that request alone.
+- **WeasyPrint no longer outlives a stopped export.** When the exporter was
+  stopped mid-run (Ctrl-C, `--watch` ending, an editor cancelling), WeasyPrint
+  kept running and left its `.name.pdf.<pid>.tmp` file in the document's
+  folder. It is now stopped with the exporter and the temp file removed.
+
 ## [1.5.2] - 2026-11-10
 
 ### Security
