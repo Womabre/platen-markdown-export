@@ -8,6 +8,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-11-22
+
+### Fixed
+
+- **`--release` no longer writes a default Author into the document.** The new
+  `Revisions` row took its author from the frontmatter with `frontmatterDefaults`
+  applied, so an `Author` from a config file could end up in the document's own
+  history. It now comes from the entry before it or the document's own `Author`.
+- **A document whose keys are written in capitals is released correctly.** The
+  export read `STATUS: Released` and `REVISIONS:` in any casing, but the release
+  only rewrote `Status`/`status`: the revision was bumped while no row was
+  appended and the status stayed Released, so every later `--release` cut
+  another one. The date stamp likewise skipped such documents. Every key is now
+  matched in any casing and keeps its own spelling, including in the new row.
+
+### Changed
+
+- Every edit the export makes to the source document (date stamp, TOC link
+  cleanup, release) now goes through one module, `source-writeback.ts`, with one
+  change check before every write. No behaviour change beyond the fixes above;
+  `--release` on an HTML input now says there is no Markdown document to release
+  instead of reporting the Status as not set.
+
 ## [1.5.4] - 2026-11-17
 
 ### Changed

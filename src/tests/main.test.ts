@@ -5,7 +5,7 @@ import * as os   from 'os';
 import * as path from 'path';
 import { main, executeExport, describeDocument, shouldStripDiagramEmoji } from '../index';
 import { extractFrontmatter } from '../frontmatter';
-import { prepareSourceUpdates } from '../markdown';
+import { openSourceDocument } from '../source-writeback';
 import { setActiveTheme } from '../theme';
 import { resolveExportPlan } from '../plan';
 import { ExitError } from '../errors';
@@ -348,7 +348,7 @@ describe('main() — a document that changed under the export', () => {
     it('does not overwrite an edit that landed mid-export', async () => {
         const file = write('concurrent', document());
 
-        // prepareSourceUpdates has read the file by the time the pipeline runs;
+        // The source write-back has read the file by the time the pipeline runs;
         // this simulates the other process finishing while it does.
         const edited = document().replace('Body text for the export.', 'Someone else was typing.');
         const run = main({ argv: ['--quiet', file] });
@@ -364,7 +364,7 @@ describe('main() — a document that changed under the export', () => {
 
         // Another process already cut the release while this export was running.
         const alreadyBumped = document({ revision: 4, status: 'Work In Progress' });
-        const run = main({ argv: ['--quiet', file] });
+        const run = main({ argv: ['--quiet', '--release', file] });
         fs.writeFileSync(file, alreadyBumped);
         await run;
 
@@ -642,8 +642,8 @@ describe('executeExport', () => {
     /** Resolves frontmatter + plan for a real document, the way `main()` does. */
     function planFor(file: string, opts: { noBump?: boolean } = {}) {
         const htmlFile = file.replace(/\.md$/, '.html');
-        const pendingSource = opts.noBump ? null : prepareSourceUpdates(file);
-        const fm = extractFrontmatter(file, pendingSource?.content);
+        const source = openSourceDocument(file, { writes: !opts.noBump, release: false, note: null });
+        const fm = extractFrontmatter(file, source.content);
         setActiveTheme('default');
         const plan = resolveExportPlan({
             inputFile: file, htmlFile, revision: fm.revision,
@@ -652,14 +652,13 @@ describe('executeExport', () => {
             cliMode: null, fmMode: fm.mode,
             cliOutput: null, cliDpi: null, cliPdfVariant: null, fmPdfVariant: null,
         });
-        return { htmlFile, fm, plan, pendingSource };
+        return { htmlFile, fm, plan, source };
     }
 
     const base = (file: string, o: ReturnType<typeof planFor>) => ({
         inputFile: file, htmlFile: o.htmlFile, markdownFile: file, isMarkdownInput: true,
-        fm: o.fm, pendingSource: o.pendingSource, stylesheetPath: null, plan: o.plan,
-        weasyprintPath: null, bumpRevisions: false, open: false, strict: false,
-        releaseNote: null,
+        fm: o.fm, source: o.source, stylesheetPath: null, plan: o.plan,
+        weasyprintPath: null, open: false, strict: false,
     });
 
     it('writes the output and reports what the source was stamped with', async () => {
@@ -674,7 +673,7 @@ describe('executeExport', () => {
         assert.match(read(file), new RegExp(TODAY), 'today\'s date is stamped');
     });
 
-    it('leaves the source untouched when there is nothing pending', async () => {
+    it('leaves the source untouched when the handle may not write', async () => {
         const file = write('exec-nobump', document());
         const before = read(file);
         const o = planFor(file, { noBump: true });

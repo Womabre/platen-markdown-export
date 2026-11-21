@@ -12,8 +12,9 @@ const { version: APP_VERSION } = require('../package.json') as { version: string
 import { parseArgs, resolveThemeRoots } from './cli';
 import { resolveExportPlan, resolveThemeName, resolveInputPaths, type ExportPlan } from './plan';
 import { log, logResult }            from './logger';
-import { extractFrontmatter, bumpRevisionAfterExport, isReleasedStatus } from './frontmatter';
-import { convertMarkdownToHtml, prepareSourceUpdates, type PendingSourceUpdate } from './markdown';
+import { extractFrontmatter, isReleasedStatus } from './frontmatter';
+import { convertMarkdownToHtml } from './markdown';
+import { openSourceDocument, type SourceDocument } from './source-writeback';
 import { inlineImages, injectLogoElements, checkLocalImages, type PageGeometry } from './images';
 import { buildCoverPage, buildHtmlBanner, HTML_BANNER_CSS, buildStyleOverrideCss, resolveStyleMainColor, validateDocumentColors } from './cover';
 import { setActiveTheme, applyStyleOverrides, applyLogoOverride, setThemeRoots } from './theme';
@@ -444,31 +445,6 @@ async function runExport(htmlContent: string, opts: ExportOptions): Promise<void
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 /**
- * Writes the deferred source edits, once an export has actually produced a file.
- *
- * Called after every output, and safe to call more than once: `commit()` writes
- * at most once and reports whether it did. The invariant is that the source is
- * stamped as soon as ANY output exists — an exported file and the document it
- * came from must not disagree about the document's own revision date.
- *
- * Runs before `bumpRevisionAfterExport`, which re-reads the document from disk:
- * the bump has to see the stamped date, not the content it replaced.
- */
-function commitSourceUpdates(pending: PendingSourceUpdate | null): string | null {
-    // `commit()` reports whether it actually wrote, so calling this after each
-    // output — as `--mode pdf,html` does — writes and logs exactly once.
-    if (!pending?.commit()) return null;
-    const what = [
-        pending.dateStamped ? 'revision date' : '',
-        pending.tocCleaned  ? 'TOC link attributes' : '',
-    ].filter(Boolean).join(' + ');
-    log(`Updated source document (${what})`);
-    // Returned so `--watch` can tell this write apart from a real edit.
-    return pending.content;
-}
-
-
-/**
  * The block of `Key : value` lines a run opens with.
  *
  * Eighteen `log()` calls that only read what `main()` had already resolved, so
@@ -526,7 +502,7 @@ async function reportDryRun(o: {
     htmlFile: string;
     markdownFile: string | null;
     fm: FrontmatterData;
-    pending: PendingSourceUpdate | null;
+    source: SourceDocument | null;
     modes: string[];
     htmlOutputFile: string | null;
     pdfOutputFile: string | null;
@@ -535,7 +511,7 @@ async function reportDryRun(o: {
 
     if (o.isMarkdownInput && o.markdownFile) {
         // No dependency accumulator: a dry run reports nothing to watch.
-        const rendered = await convertMarkdownToHtml(o.inputFile, o.pending?.content, o.fm);
+        const rendered = await convertMarkdownToHtml(o.inputFile, o.source?.content, o.fm);
         checkLocalImages(rendered, o.htmlFile);
 
         // The external binary a Mermaid document needs, checked the way
@@ -616,57 +592,46 @@ export async function main(opts: { inWatch?: boolean; argv?: string[] } = {}): P
 
     // ── Frontmatter ───────────────────────────────────────────────────────────
 
-    // Computed now — the export needs today's stamped revision date — but NOT
-    // written until an export has actually succeeded (see `commitSourceUpdates`
-    // below). The source document is the principal's, and a run that dies on a
-    // missing asset, or never exports at all because `Mode` is unset, must leave
-    // it exactly as it found it.
+    // The source write-back (source-writeback.ts) reads the document once and
+    // hands back the text to render, stamped with today's revision date. Nothing
+    // reaches the file until an output has landed: a run that dies on a missing
+    // asset, or never exports because `Mode` is unset, leaves it as it found it.
+    // `--no-bump` opens it read-only.
+    //
+    // Cutting a release is a deliberate act, so it takes a deliberate flag, and
+    // `Status: Released` still guards it: the status is the document declaring
+    // it is final, the flag is you saying cut it now. The handle checks both
+    // here, before the export, and warns when there is nothing to release.
+    //
     // The `existsSync` guard is what lets a missing document reach `validate`
     // below and exit 3 ("Markdown file not found") instead of dying here on a
-    // raw ENOENT with the generic exit 1. It used to be unreachable, because
-    // the conversion above read the file first.
-    const pendingSource = markdownFile && !noBump && fs.existsSync(markdownFile)
-        ? prepareSourceUpdates(markdownFile)
+    // raw ENOENT with the generic exit 1.
+    const source = markdownFile && fs.existsSync(markdownFile)
+        ? openSourceDocument(markdownFile, { writes: !noBump, release, note: releaseNote })
         : null;
 
-    // Cutting a release is a deliberate act, so it takes a deliberate flag.
-    //
-    // This used to happen on ANY export of a document whose Status was Released:
-    // the revisions row appended, every Revision scalar bumped, the status reset.
-    // Correct for the export you meant as a release; wrong for the other three
-    // ways an export happens — the extension firing on save, a CI run, a
-    // colleague re-exporting to read it — and defending against those took three
-    // separate flags (`--no-bump`, `--no-revision-bump`, `Export On Save: false`).
-    // A default nobody wants, with machinery to switch it off, is the wrong way
-    // round: now nothing cuts a release except `--release`.
-    //
-    // `Status: Released` still guards it. The two say different things — the
-    // status is the document declaring it is final, the flag is you saying cut it
-    // now — and a Revisions row recording a release that never happened would be
-    // a lie in the document's own history.
-    const bumpRevisions = Boolean(markdownFile) && !noBump && release;
+    if (noRevisionBump)
+        log('Note: --no-revision-bump does nothing now — only --release cuts a release');
+    // With no source handle there is nothing to release, and the handle is what
+    // reports that for a Markdown input. Still one warning, so `--strict` judges
+    // an HTML input given --release the way it always did.
+    if (release && !noBump && !source)
+        log('WARNING: --release given, but there is no Markdown source document — nothing to release.');
+
     // `frontmatterDefaults` from the config files beside and above the document
     // fill in what it does not set itself — see projectconfig.ts.
     const defaults = discoveredFrontmatterDefaults(path.dirname(path.resolve(markdownFile ?? inputFile)));
-    const fm = extractFrontmatter(markdownFile, pendingSource?.content, defaults.values);
-    logDefaultsUsed(defaults, markdownFile, pendingSource?.content);
+    const fm = extractFrontmatter(markdownFile, source?.content, defaults.values);
+    logDefaultsUsed(defaults, markdownFile, source?.content);
     // Only what `main()` itself still reads: `logStartupSummary` takes the whole
     // frontmatter, so the fields that existed purely to be printed went with it.
-    const { revision, status, theme, style, logo } = fm;
-
-    // Both notes need the parsed frontmatter, so they sit here rather than beside
-    // the `bumpRevisions` decision above.
-    if (noRevisionBump)
-        log('Note: --no-revision-bump does nothing now — only --release cuts a release');
-    if (release && !noBump && !isReleasedStatus(status))
-        log(`WARNING: --release given, but Status is ${status ? `"${status}"` : 'not set'} — ` +
-            'nothing to release. Set Status: Released (or Vrijgegeven) first.');
+    const { revision, theme, style, logo } = fm;
 
     // `--inspect` answers questions ABOUT the document and stops. It sits here,
     // after the frontmatter is parsed and before the theme is loaded, because
     // everything below writes, renders or resolves assets and none of that is
     // wanted — a caller asking what a document says must not be able to change
-    // it. `pendingSource` is computed above but never committed on this path.
+    // it. The source handle is open but no output lands on this path, so it never writes.
     if (inspect) {
         logResult(JSON.stringify(describeDocument(fm, markdownFile), null, 2));
         return NOTHING_EXPORTED;
@@ -735,12 +700,12 @@ export async function main(opts: { inWatch?: boolean; argv?: string[] } = {}): P
     // document with `Mode:` set had no way to be checked without also producing a
     // file, since `--mode ''` and `--mode none` are both usage errors.
     //
-    // It stops before `prepareSourceUpdates` is committed, so the source document
-    // is left byte-for-byte as it was found.
+    // It stops before any output lands, so the source write-back never writes and
+    // the source document is left byte-for-byte as it was found.
     if (dryRun) {
         await reportDryRun({
             isMarkdownInput, inputFile, htmlFile, markdownFile, fm,
-            pending: pendingSource, modes, htmlOutputFile, pdfOutputFile,
+            source, modes, htmlOutputFile, pdfOutputFile,
         });
         assertNoWarnings(strict);
         log('=== Export finished ===');
@@ -754,8 +719,8 @@ export async function main(opts: { inWatch?: boolean; argv?: string[] } = {}): P
     }
 
     return executeExport({
-        inputFile, htmlFile, markdownFile, isMarkdownInput, fm, pendingSource,
-        stylesheetPath, plan, weasyprintPath, bumpRevisions, open, strict, releaseNote,
+        inputFile, htmlFile, markdownFile, isMarkdownInput, fm, source,
+        stylesheetPath, plan, weasyprintPath, open, strict,
     });
 }
 
@@ -766,16 +731,14 @@ interface ExecuteOptions {
     markdownFile: string | null;
     isMarkdownInput: boolean;
     fm: FrontmatterData;
-    pendingSource: PendingSourceUpdate | null;
+    /** The source write-back, or null for an HTML input (and a missing document). */
+    source: SourceDocument | null;
     stylesheetPath: string | null;
     plan: ExportPlan;
     /** Non-null whenever the plan includes a PDF mode. */
     weasyprintPath: string | null;
-    bumpRevisions: boolean;
     open: boolean;
     strict: boolean;
-    /** `--release-note`: the Remarks for the revision being released. */
-    releaseNote: string | null;
 }
 
 /**
@@ -826,8 +789,8 @@ export async function shouldStripDiagramEmoji(
  * Exported for testing.
  */
 export async function executeExport(o: ExecuteOptions): Promise<ExportResult> {
-    const { inputFile, htmlFile, markdownFile, isMarkdownInput, fm, pendingSource,
-            stylesheetPath, plan, weasyprintPath, bumpRevisions, open, strict, releaseNote } = o;
+    const { inputFile, htmlFile, isMarkdownInput, fm, source,
+            stylesheetPath, plan, weasyprintPath, open, strict } = o;
     const { hasPdf, hasHtml, pdfMode, dpi, pdfVariant, htmlOutputFile, pdfOutputFile } = plan;
     const { title, style } = fm;
 
@@ -872,7 +835,7 @@ export async function executeExport(o: ExecuteOptions): Promise<ExportResult> {
     // computed above, and this is the only reason the document had to be read
     // three times per export.
     const rawHtmlContent = isMarkdownInput
-        ? await convertMarkdownToHtml(inputFile, pendingSource?.content, fm, dependencies)
+        ? await convertMarkdownToHtml(inputFile, source?.content, fm, dependencies)
         : null;
 
     const preRenderContent = rawHtmlContent ?? fs.readFileSync(htmlFile, 'utf8');
@@ -896,11 +859,6 @@ export async function executeExport(o: ExecuteOptions): Promise<ExportResult> {
         { stripDiagramEmoji, infographicIcons: plan.infographicIcons, lang: fm.lang },
     );
 
-    // What this run wrote back to the source document, if anything — the
-    // revision-date stamp and then, on a release, the bump. `--watch` compares
-    // it against the file to tell its own writes apart from a real edit.
-    let sourceWritten: string | null = null;
-
     // ── HTML export (no WeasyPrint) ───────────────────────────────────────────
 
     if (hasHtml) {
@@ -919,9 +877,9 @@ export async function executeExport(o: ExecuteOptions): Promise<ExportResult> {
         // This file already carries today's revision date; deferring the source
         // write until after the PDF meant that in `--mode pdf,html` a WeasyPrint
         // failure left an exported document and its own source disagreeing about
-        // the document's date. The revision *bump* still waits for every output,
-        // so both artifacts carry the same pre-bump revision.
-        sourceWritten = commitSourceUpdates(pendingSource) ?? sourceWritten;
+        // the document's date. The release still waits for every output, so both
+        // artifacts carry the same pre-release revision.
+        source?.outputLanded();
 
         if (open) openFile(outputFile);
     }
@@ -936,17 +894,16 @@ export async function executeExport(o: ExecuteOptions): Promise<ExportResult> {
 
         const processed = await buildHtmlPipeline(htmlContent, htmlFile, stylesheetPath, fm, coverPromise, fallbackFontsPromise, dependencies);
         await runExport(processed, { weasyprintPath: weasyprintPath!, htmlFile, pdfFile: outputFile, dpi, pdfVariant, mode: pdfMode, startMs, open });
-        sourceWritten = commitSourceUpdates(pendingSource) ?? sourceWritten;
-        if (bumpRevisions) sourceWritten = bumpRevisionAfterExport(markdownFile!, fm, pendingSource?.content, releaseNote) ?? sourceWritten;
-        assertNoWarnings(strict);
-        return { sourceWritten, dependencies: [...dependencies] }; // runExport logged the finish line
     }
 
-    sourceWritten = commitSourceUpdates(pendingSource) ?? sourceWritten;
-    if (bumpRevisions) sourceWritten = bumpRevisionAfterExport(markdownFile!, fm, pendingSource?.content, releaseNote) ?? sourceWritten;
-    log('=== Export finished ===');
+    // Every output is on disk: the stamp if no output earned it yet, then the
+    // release, if one was asked for.
+    source?.allOutputsLanded();
+    if (!hasPdf) log('=== Export finished ===');   // runExport logs it for a PDF
     assertNoWarnings(strict);
-    return { sourceWritten, dependencies: [...dependencies] };
+    // `--watch` compares what was written with the file, to tell its own
+    // writes apart from a real edit.
+    return { sourceWritten: source?.written ?? null, dependencies: [...dependencies] };
 }
 
 /**

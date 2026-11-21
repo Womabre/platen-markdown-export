@@ -17,12 +17,11 @@ import ins from 'markdown-it-ins';
 const taskLists = require('markdown-it-task-lists') as (md: MarkdownIt.MarkdownIt) => void;
 import hljs from 'highlight.js';
 import { log } from './logger';
-import { writeFileAtomic } from './fsutil';
 import { mermaidPlaceholder } from './mermaid';
 import { graphvizPlaceholder } from './graphviz';
 import { infographicPlaceholder } from './infographic';
 import { attrOf, setAttr, tagPattern } from './attributes';
-import { escHtml, extractFrontmatter, stampRevisionDate, resolveRevision, CONCURRENT_EXPORT_HINT } from './frontmatter';
+import { escHtml, extractFrontmatter, resolveRevision } from './frontmatter';
 import type { FrontmatterData } from './types';
 import { documentLabels } from './labels';
 import {
@@ -478,106 +477,15 @@ export function cleanTocAttrs(body: string): string {
     );
 }
 
-/** The edits an export wants to make to the principal's own source document. */
-export interface PendingSourceUpdate {
-    /** The updated content. The export is built from this, written or not. */
-    content: string;
-    /** The last `Revisions` entry got today's date. */
-    dateStamped: boolean;
-    /** markdown-it-attrs syntax was stripped from the source TOC links. */
-    tocCleaned: boolean;
-    /** Whether anything changed at all — `commit()` is a no-op when false. */
-    changed: boolean;
-    /**
-     * Writes the update, once. Call as soon as an export has actually produced
-     * an output file.
-     *
-     * @returns whether this call wrote — false if there was nothing to write, or
-     *          if a previous call already did. Idempotent because more than one
-     *          output can be produced in a run (`--mode pdf,html`) and each of
-     *          them earns the stamp, but only the first should write or log it.
-     */
-    commit(): boolean;
-}
-
-/**
- * Computes every edit the export makes to the source document, without writing.
- *
- * Two edits, over one read of the file:
- *   - today's date stamped on the last `Revisions` entry ({@link stampRevisionDate});
- *   - markdown-it-attrs syntax stripped from auto-generated TOC links
- *     ({@link cleanTocAttrs}), so they are clickable in the .md itself and not
- *     only in the export.
- *
- * They are computed together because they are written together: two independent
- * read-modify-write passes over the same file would have the second clobber the
- * first. And they are deferred rather than applied because the file belongs to
- * the principal — an export that dies on a missing font has no business having
- * already stamped a new date, and a dry run (`Mode:` unset) has no business
- * touching the document at all. `commit()` is called after a successful export.
- *
- * Idempotent: running it against already-updated content reports no change.
- */
-export function prepareSourceUpdates(mdFile: string): PendingSourceUpdate {
-    const original = fs.readFileSync(mdFile, 'utf8');
-
-    const dated   = stampRevisionDate(original);
-    const cleaned = cleanTocAttrs(dated);
-
-    const dateStamped = dated !== original;
-    const tocCleaned  = cleaned !== dated;
-    let   committed   = false;
-
-    return {
-        content: cleaned,
-        dateStamped,
-        tocCleaned,
-        changed: cleaned !== original,
-        commit: () => {
-            if (committed || cleaned === original) return false;
-            committed = true;
-
-            // Compare-and-swap, not a blind write.
-            //
-            // Nothing serialises two exports of the same document, and there are
-            // three ways to get them: `--watch` in one terminal and a manual run
-            // in another, the VS Code extension exporting on save while a CLI
-            // export is mid-flight, or simply two windows. Each computed its
-            // stamp from the bytes it read at the start, so the one that finishes
-            // second used to overwrite whatever the first had written — the
-            // classic lost update, and the thing lost is the principal's own
-            // document.
-            //
-            // Refusing is the whole fix. This write is a convenience (a date the
-            // next export will stamp again anyway); the other process's write may
-            // not be. Skipping costs a stamp, clobbering costs an edit.
-            let current: string;
-            try { current = fs.readFileSync(mdFile, 'utf8'); }
-            catch { return false; }        // vanished mid-export; nothing to update
-            if (current !== original) {
-                log('WARNING: The source document changed during the export — ' +
-                    'not writing the revision date, to avoid overwriting that change.\n' +
-                    `${CONCURRENT_EXPORT_HINT}\n` +
-                    '  The output is still correct; only this stamp was skipped, and the next ' +
-                    'export writes it.');
-                return false;
-            }
-
-            writeFileAtomic(mdFile, cleaned);
-            return true;
-        },
-    };
-}
-
 /**
  * Renders a Markdown document to the HTML the pipelines start from.
  *
  * @param mdFile      The document, used for include resolution and messages.
  * @param source      Its content, when the caller already has it. `main()` does:
- *                    it reads the file to compute the deferred source edits, so
- *                    passing that content back means the document is read once
- *                    per run instead of three times (here, in
- *                    `prepareSourceUpdates`, and again in `extractFrontmatter`).
+ *                    its source write-back reads the file once (see
+ *                    source-writeback.ts), and passing that content back means
+ *                    the document is read once per run instead of three times
+ *                    (here, in the write-back, and again in `extractFrontmatter`).
  *                    It also means the render sees exactly the bytes that will
  *                    be written to disk rather than the pre-stamp file.
  * @param frontmatter Its parsed frontmatter, likewise — `main()` has already

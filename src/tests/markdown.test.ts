@@ -5,7 +5,7 @@ import * as os   from 'os';
 import * as path from 'path';
 import {
     hideFrontmatterTable, buildGlossary, stripMarkdownToc,
-    cleanTocAttrs, prepareSourceUpdates, rewriteRelativeImagePaths, resolveIncludes,
+    cleanTocAttrs, rewriteRelativeImagePaths, resolveIncludes,
     parseLineRange, sliceLines, convertMarkdownToHtml, documentUsesKatex, stripFencedCode,
 } from '../markdown';
 import { extractFrontmatter } from '../frontmatter';
@@ -225,108 +225,6 @@ describe('cleanTocAttrs', () => {
         assert.ok(!result.includes('{.x}'));
         assert.ok(!result.includes('{.y}'));
         assert.ok(result.includes('[C](#c)'));
-    });
-});
-
-// ── prepareSourceUpdates ──────────────────────────────────────────────────────
-//
-// Source edits are computed up front (the export needs today's stamped date) but
-// written only once an export has succeeded. These tests pin both halves: what
-// the export sees, and that nothing reaches disk until commit().
-
-const DIRTY_TOC =
-    '# Doc\n\n- [Frontmatter \\& Cover Page {.page-break-before}](#frontmatter--cover-page-page-break-before)\n\n## Frontmatter & Cover Page {.page-break-before}\n';
-
-describe('prepareSourceUpdates', () => {
-    it('computes the cleaned TOC without touching the file', () => {
-        const file = path.join(tmpDir, 'toc-dirty.md');
-        fs.writeFileSync(file, DIRTY_TOC);
-
-        const pending = prepareSourceUpdates(file);
-
-        assert.equal(pending.tocCleaned, true);
-        assert.equal(pending.changed, true);
-        assert.ok(pending.content.includes('[Frontmatter \\& Cover Page](#frontmatter--cover-page)'));
-        // The heading line (not a link) must keep its attribute so page breaks still work.
-        assert.ok(pending.content.includes('## Frontmatter & Cover Page {.page-break-before}'));
-        assert.equal(fs.readFileSync(file, 'utf8'), DIRTY_TOC, 'file must be untouched before commit()');
-    });
-
-    it('writes the update only when commit() is called', () => {
-        const file = path.join(tmpDir, 'toc-commit.md');
-        fs.writeFileSync(file, DIRTY_TOC);
-
-        const pending = prepareSourceUpdates(file);
-        assert.equal(fs.readFileSync(file, 'utf8'), DIRTY_TOC);
-
-        pending.commit();
-        assert.equal(fs.readFileSync(file, 'utf8'), pending.content);
-    });
-
-    it('is idempotent and leaves an already-clean file untouched', () => {
-        const file = path.join(tmpDir, 'toc-clean.md');
-        const clean = '# Doc\n\n- [Setup](#setup)\n\n## Setup\n';
-        fs.writeFileSync(file, clean);
-
-        const pending = prepareSourceUpdates(file);
-        assert.equal(pending.changed, false);
-        assert.equal(pending.content, clean);
-
-        pending.commit();   // no-op
-        assert.equal(fs.readFileSync(file, 'utf8'), clean);
-    });
-
-    it('stamps today on the last Revisions entry when Status is Work In Progress', () => {
-        const file  = path.join(tmpDir, 'dated.md');
-        // Local calendar date, matching `formatDate` in frontmatter.ts — a
-        // document's revision date is the author's date, not UTC's. Deriving the
-        // expectation from `toISOString()` instead made this test fail for the
-        // hours each day when the two disagree (anywhere east of UTC, after
-        // local midnight), which is a flake nobody would enjoy diagnosing.
-        const now   = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        fs.writeFileSync(file, [
-            '---',
-            'Title: Spec',
-            'Status: Work In Progress',
-            'Revisions:',
-            '    - Revision: 1',
-            '      Date: "2020-01-01"',
-            '      Author: Someone',
-            '---',
-            '',
-            '# Spec',
-            '',
-        ].join('\n'));
-
-        const pending = prepareSourceUpdates(file);
-
-        assert.equal(pending.dateStamped, true);
-        assert.ok(pending.content.includes(`Date: "${today}"`), pending.content);
-        assert.ok(!pending.content.includes('2020-01-01'));
-        assert.ok(fs.readFileSync(file, 'utf8').includes('2020-01-01'), 'not written before commit()');
-    });
-
-    it('leaves the date alone for a status that is neither WIP nor Released', () => {
-        const file = path.join(tmpDir, 'draft.md');
-        const src  = [
-            '---',
-            'Status: Draft',
-            'Revisions:',
-            '    - Revision: 1',
-            '      Date: "2020-01-01"',
-            '---',
-            '',
-            '# Draft',
-            '',
-        ].join('\n');
-        fs.writeFileSync(file, src);
-
-        const pending = prepareSourceUpdates(file);
-
-        assert.equal(pending.dateStamped, false);
-        assert.equal(pending.changed, false);
-        assert.ok(pending.content.includes('2020-01-01'));
     });
 });
 
@@ -702,52 +600,6 @@ describe('wrapCodeLines — trailing newline inside an open span', () => {
 
     it('still handles no trailing newline', () => {
         assert.equal((wrapCodeLines('a\nb', new Set()).match(/class="code-line/g) ?? []).length, 2);
-    });
-});
-
-// ── commit() idempotency ──────────────────────────────────────────────────────
-
-describe('prepareSourceUpdates commit() is idempotent', () => {
-    const DATED = [
-        '---',
-        'Title: T',
-        'Status: Work In Progress',
-        'Revisions:',
-        '  - Revision: 1',
-        '    Date: "2020-01-01"',
-        '    Author: W',
-        '---',
-        '',
-        '# T',
-    ].join('\n');
-
-    it('writes once and reports it, then reports false on every later call', () => {
-        // `--mode pdf,html` produces two outputs and each of them earns the
-        // source stamp, so main() commits after both. Only the first may write
-        // or log; the second must be a silent no-op.
-        const file = path.join(tmpDir, 'commit-twice.md');
-        fs.writeFileSync(file, DATED);
-
-        const pending = prepareSourceUpdates(file);
-        assert.equal(pending.changed, true);
-
-        assert.equal(pending.commit(), true,  'first commit writes');
-        const afterFirst = fs.readFileSync(file, 'utf8');
-
-        assert.equal(pending.commit(), false, 'second commit is a no-op');
-        assert.equal(pending.commit(), false, 'and stays one');
-        assert.equal(fs.readFileSync(file, 'utf8'), afterFirst, 'the file must not change again');
-    });
-
-    it('reports false when there was nothing to write in the first place', () => {
-        const file = path.join(tmpDir, 'commit-clean.md');
-        const clean = '# Nothing to stamp\n';
-        fs.writeFileSync(file, clean);
-
-        const pending = prepareSourceUpdates(file);
-        assert.equal(pending.changed, false);
-        assert.equal(pending.commit(), false);
-        assert.equal(fs.readFileSync(file, 'utf8'), clean);
     });
 });
 

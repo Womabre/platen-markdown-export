@@ -315,7 +315,9 @@ disagree about the document's own date.
 **Cutting a release is not.** Pass `--release`, and after a successful export the
 tool will:
 
-1. append a new `Revisions` entry (next revision, today's date, same author),
+1. append a new `Revisions` entry (next revision, today's date, the author of
+   the entry before it, or the document's own `Author`; never a value from
+   `frontmatterDefaults`),
 2. update every `Revision:` scalar to the new value,
 3. reset `Status:` to `Work In Progress`.
 

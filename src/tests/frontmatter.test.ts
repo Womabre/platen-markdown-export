@@ -3,11 +3,9 @@ import assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { escHtml, parseImageSpec, extractFrontmatter, isReleasedStatus, stampRevisionDate,
-         bumpRevisionAfterExport, yamlQuote, yamlScalar, setLastRevisionRemarks,
-         resolveRevision, frontmatterTemplate } from '../frontmatter';
+import { escHtml, parseImageSpec, extractFrontmatter, isReleasedStatus,
+         yamlQuote, yamlScalar, resolveRevision, frontmatterTemplate } from '../frontmatter';
 import { loadTheme } from '../theme';
-import frontMatter from 'front-matter';
 
 let tmpDir: string;
 
@@ -393,23 +391,7 @@ describe('cover and footer overrides', () => {
 
 // ── Released-status vocabulary ────────────────────────────────────────────────
 
-describe('released status is one vocabulary, not three', () => {
-    const doc = (status: string) => [
-        '---',
-        'Title: T',
-        `Status: ${status}`,
-        'Revisions:',
-        '  - Revision: 1',
-        '    Date: "2020-01-01"',
-        '    Author: W',
-        '---',
-        '',
-        '# T',
-    ].join('\n');
-
-    const TODAY = new Date('2026-09-02T12:00:00Z');
-    const stampedToday = (status: string) => /2026-09-02/.test(stampRevisionDate(doc(status), TODAY));
-
+describe('isReleasedStatus', () => {
     it('recognises both spellings of released', () => {
         assert.equal(isReleasedStatus('Released'), true);
         assert.equal(isReleasedStatus('Vrijgegeven'), true);
@@ -417,28 +399,7 @@ describe('released status is one vocabulary, not three', () => {
         assert.equal(isReleasedStatus('Final'), false);
         assert.equal(isReleasedStatus(null), false);
     });
-
-    it('stamps the revision date for a Dutch released document', () => {
-        // The bug this locks down: `isReleasedStatus` knew about Vrijgegeven,
-        // but stampRevisionDate and bumpRevisionAfterExport each hardcoded the
-        // English string — so a Dutch document had its watermark suppressed for
-        // being released, then was never dated and never bumped.
-        assert.equal(stampedToday('Vrijgegeven'), true);
-    });
-
-    it('still stamps for the English spellings', () => {
-        assert.equal(stampedToday('Released'), true);
-        assert.equal(stampedToday('Work In Progress'), true);
-        assert.equal(stampedToday('work in progress'), true);
-    });
-
-    it('leaves a document with any other status alone', () => {
-        assert.equal(stampedToday('Final'), false);
-        assert.equal(stampedToday('Draft'), false);
-    });
 });
-
-// ── Appending a revisions row ─────────────────────────────────────────────────
 
 describe('yamlQuote', () => {
     it('quotes a plain value', () => {
@@ -459,67 +420,6 @@ describe('yamlQuote', () => {
 
     it('keeps an empty value a string rather than YAML null', () => {
         assert.equal(yamlQuote(''), '""');
-    });
-});
-
-describe('the release bump writes YAML that still parses', () => {
-    const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'pme-bump-'));
-
-    /** A released document whose last revisions row carries `author`. */
-    const doc = (author: string, inline = false) => [
-        '---',
-        'Title: T',
-        'Status: Released',
-        'Revisions:',
-        inline
-            ? `  - {Revision: 1, Date: "2020-01-01", Author: ${author}, Remarks: first}`
-            : `  - Revision: 1\n    Date: "2020-01-01"\n    Author: ${author}`,
-        '---',
-        '',
-        '# T',
-    ].join('\n');
-
-    /** Bumps `content` in a temp file and returns what was written. */
-    const bump = (content: string): string => {
-        const dir  = tmp();
-        const file = path.join(dir, 'doc.md');
-        fs.writeFileSync(file, content);
-        try {
-            const fm = extractFrontmatter(file);
-            bumpRevisionAfterExport(file, fm);
-            return fs.readFileSync(file, 'utf8');
-        } finally {
-            fs.rmSync(dir, { recursive: true, force: true });
-        }
-    };
-
-    it('survives an author whose name contains a colon', () => {
-        // Unquoted, `Author: Smith, John: PDM` is not a YAML scalar — the whole
-        // frontmatter stops parsing, on the export that cut the release.
-        const out = bump(doc('"Smith, John: PDM"'));
-        const parsed = frontMatter(out) as { attributes: Record<string, unknown> };
-        assert.ok(Array.isArray(parsed.attributes.Revisions), 'frontmatter still parses');
-        assert.equal((parsed.attributes.Revisions as Array<Record<string, unknown>>).length, 2);
-    });
-
-    it('quotes the author it copies into the new row', () => {
-        assert.match(bump(doc('Jane Doe')), /Author: "Jane Doe"/);
-    });
-
-    it('does the same inside the inline row form', () => {
-        const out = bump(doc('"Smith, John: PDM"', true));
-        const parsed = frontMatter(out) as { attributes: Record<string, unknown> };
-        const revs = parsed.attributes.Revisions as Array<Record<string, unknown>>;
-        assert.equal(revs.length, 2, 'the flow mapping is still a mapping');
-        assert.equal(revs[1].Author, 'Smith, John: PDM');
-    });
-
-    it('still reads the date and revision back as it wrote them', () => {
-        const out = bump(doc('Jane Doe'));
-        const revs = (frontMatter(out) as { attributes: Record<string, unknown> })
-            .attributes.Revisions as Array<Record<string, unknown>>;
-        assert.equal(String(revs[1].Revision), '2');
-        assert.equal(revs[1].Author, 'Jane Doe');
     });
 });
 
@@ -679,82 +579,6 @@ describe('yamlScalar', () => {
     });
 });
 
-// ── setLastRevisionRemarks ────────────────────────────────────────────────────
-
-/**
- * The release note goes on the OUTGOING revision — the row already there,
- * describing the work being signed off — not the fresh row `--release` appends
- * for the next one. Getting that backwards would annotate a revision in which
- * nothing has happened yet.
- */
-describe('setLastRevisionRemarks', () => {
-    const lines = (s: string): string[] => s.split('\n');
-
-    it('fills an empty inline Remarks', () => {
-        const l = lines([
-            'Revisions:',
-            '    - {Revision: 2, Date: "2026-01-01", Author: A, Remarks: older}',
-            '    - {Revision: 3, Date: "2026-02-01", Author: A, Remarks: }',
-        ].join('\n'));
-        assert.equal(setLastRevisionRemarks(l, 'signed off'), true);
-        assert.match(l[2], /Remarks: signed off\}/);
-        assert.match(l[1], /Remarks: older\}/, 'earlier rows are untouched');
-    });
-
-    it('replaces a non-empty inline Remarks', () => {
-        const l = lines('Revisions:\n    - {Revision: 3, Date: "d", Author: A, Remarks: old}');
-        setLastRevisionRemarks(l, 'new');
-        assert.match(l[1], /Remarks: new\}/);
-    });
-
-    it('quotes a note that would break the flow mapping', () => {
-        const l = lines('Revisions:\n    - {Revision: 3, Date: "d", Author: A, Remarks: }');
-        setLastRevisionRemarks(l, 'fixed A, added B');
-        assert.match(l[1], /Remarks: "fixed A, added B"\}/);
-    });
-
-    it('adds a Remarks key to an inline row that has none', () => {
-        const l = lines('Revisions:\n    - {Revision: 3, Date: "d", Author: A}');
-        setLastRevisionRemarks(l, 'note');
-        assert.match(l[1], /, Remarks: note\}$/);
-    });
-
-    it('fills a block-form Remarks', () => {
-        const l = lines([
-            'Revisions:',
-            '    - Revision: 3',
-            '      Date: "2026-02-01"',
-            '      Author: A',
-            '      Remarks:',
-        ].join('\n'));
-        assert.equal(setLastRevisionRemarks(l, 'signed off'), true);
-        assert.equal(l[4], '      Remarks: signed off');
-    });
-
-    it('adds a Remarks key to a block row that has none', () => {
-        const l = lines('Revisions:\n    - Revision: 3\n      Author: A');
-        setLastRevisionRemarks(l, 'note');
-        assert.equal(l[3], '      Remarks: note');
-    });
-
-    it('keeps the document\'s own key casing', () => {
-        const l = lines('revisions:\n    - {revision: 3, date: "d", author: a, remarks: }');
-        setLastRevisionRemarks(l, 'note');
-        assert.match(l[1], /remarks: note\}/);
-        assert.ok(!/Remarks/.test(l[1]), 'must not introduce a capitalised key');
-    });
-
-    it('reports false when there is no revisions list to annotate', () => {
-        assert.equal(setLastRevisionRemarks(lines('Title: x'), 'note'), false);
-    });
-
-    it('inserts a note containing $& verbatim', () => {
-        const l = lines('Revisions:\n    - {Revision: 3, Date: "d", Author: A, Remarks: }');
-        setLastRevisionRemarks(l, 'a$&b');
-        assert.match(l[1], /Remarks: a\$&b\}/);
-    });
-});
-
 // ── frontmatterTemplate with answers ──────────────────────────────────────────
 
 describe('frontmatterTemplate --answers', () => {
@@ -810,53 +634,3 @@ describe('frontmatterTemplate --answers', () => {
     });
 });
 
-describe('rewriting the frontmatter leaves the body byte for byte', () => {
-    // The bug this locks down: the front-matter library matches the closing
-    // delimiter with `\s*$` under the `m` flag, so its `body` starts after
-    // every blank line that follows `---`. Both rewrites rebuilt the file from
-    // that body, and each date stamp or release bump deleted the blank line
-    // between the frontmatter and the first heading.
-    const TODAY = new Date('2026-09-02T12:00:00Z');
-    const doc = (status: string, gap: string, eol = '\n') => [
-        '---',
-        'Title: T',
-        `Status: ${status}`,
-        'Revisions:',
-        '  - Revision: 1',
-        '    Date: "2020-01-01"',
-        '    Author: W',
-        '---',
-    ].join(eol) + eol + gap + '# T' + eol + eol + 'Text.' + eol;
-
-    const bodyOf = (content: string, eol = '\n') =>
-        content.slice(content.indexOf(`${eol}---${eol}`) + `${eol}---${eol}`.length);
-
-    for (const [label, gap] of [['one blank line', '\n'], ['two blank lines', '\n\n'], ['none', '']]) {
-        it(`keeps ${label} after a date stamp`, () => {
-            const out = stampRevisionDate(doc('Work In Progress', gap), TODAY);
-            assert.match(out, /2026-09-02/, 'the stamp happened');
-            assert.equal(bodyOf(out), `${gap}# T\n\nText.\n`);
-        });
-    }
-
-    it('keeps the blank line after a release bump', () => {
-        const dir  = fs.mkdtempSync(path.join(os.tmpdir(), 'pme-gap-'));
-        const file = path.join(dir, 'doc.md');
-        fs.writeFileSync(file, doc('Released', '\n'));
-        try {
-            bumpRevisionAfterExport(file, extractFrontmatter(file));
-            const out = fs.readFileSync(file, 'utf8');
-            assert.match(out, /Revision: 2/, 'the bump happened');
-            assert.equal(bodyOf(out), '\n# T\n\nText.\n');
-        } finally {
-            fs.rmSync(dir, { recursive: true, force: true });
-        }
-    });
-
-    it('keeps a CRLF blank line too', () => {
-        const out = stampRevisionDate(doc('Work In Progress', '\r\n', '\r\n'), TODAY);
-        assert.match(out, /2026-09-02/);
-        assert.ok(out.endsWith('---\n\r\n# T\r\n\r\nText.\r\n') || out.endsWith('---\r\n\r\n# T\r\n\r\nText.\r\n'),
-            JSON.stringify(out.slice(-40)));
-    });
-});
