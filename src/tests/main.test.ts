@@ -9,6 +9,7 @@ import { prepareSourceUpdates } from '../markdown';
 import { setActiveTheme } from '../theme';
 import { resolveExportPlan } from '../plan';
 import { ExitError } from '../errors';
+import { CONFIG_FILENAME } from '../projectconfig';
 import { setQuiet } from '../logger';
 
 /**
@@ -248,6 +249,59 @@ describe('main() — the release bump', () => {
         assert.equal((read(file).match(/- Revision: /g) ?? []).length,
                      (afterFirst.match(/- Revision: /g) ?? []).length,
                      'the status reset is what stops the second one');
+    });
+});
+
+describe('main() — the release writes only what the document says', () => {
+    // The writer used to take the frontmatter main() had parsed WITH the
+    // config's `frontmatterDefaults` applied, so a default Author ended up in
+    // the appended Revisions row: a value the document never stated, written
+    // into the document.
+    it('never writes a frontmatterDefaults Author into the new revisions row', async () => {
+        const sub = path.join(dir, 'with-default-author');
+        fs.mkdirSync(sub, { recursive: true });
+        fs.writeFileSync(path.join(sub, CONFIG_FILENAME),
+                         JSON.stringify({ frontmatterDefaults: { Author: 'Default Person' } }));
+        const file = path.join(sub, 'doc.md');
+        fs.writeFileSync(file, `---
+Title: Default Author
+Theme: default
+Style: Navy
+Mode: html
+Document Info:
+  Revision: 3
+  Status: Released
+Revisions:
+  - Revision: 3
+    Date: "2020-01-01"
+    Remarks: first
+---
+
+# Default Author
+`);
+
+        await main({ argv: ['--quiet', '--release', file] });
+
+        const after = read(file);
+        assert.match(after, /- Revision: 4/, 'the release was cut');
+        assert.doesNotMatch(after, /Default Person/, 'and the default never reached the document');
+    });
+
+    // The reader matches keys case-insensitively; the writer only knew two
+    // spellings. A document the reader saw as Released was then never reset,
+    // so every later --release cut another one.
+    it('releases a document whose keys are written in capitals, keeping their spelling', async () => {
+        const file = write('capitals', document({ status: 'Released' })
+            .replace('Status: Released', 'STATUS: Released')
+            .replace('Revisions:', 'REVISIONS:'));
+
+        await main({ argv: ['--quiet', '--release', file] });
+
+        const after = read(file);
+        assert.match(after, /STATUS: Work In Progress/, 'the status resets in its own spelling');
+        assert.match(after, /^  Revision: 4$/m,         'the Document Info revision moves on');
+        assert.match(after, new RegExp(`- Revision: 4\\n\\s+Date: "${TODAY}"`), 'a new revisions row is appended');
+        assert.match(after, new RegExp(`- Revision: 3\\n\\s+Date: "${TODAY}"`), 'and the released row was date-stamped');
     });
 });
 

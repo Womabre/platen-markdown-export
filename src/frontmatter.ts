@@ -592,7 +592,7 @@ function formatDate(d: Date): string {
 
 function statusFromYaml(yaml: string): string | null {
     // Matches "Status:" or "status:" at any indentation and returns the trimmed value
-    const m = yaml.match(/^[ \t]*(?:Status|status)\s*:\s*([^\n\r]+)/m);
+    const m = yaml.match(/^[ \t]*status\s*:\s*([^\n\r]+)/im);
     return m ? m[1].trim().replace(/^["']|["']$/g, '') : null;
 }
 
@@ -625,7 +625,7 @@ function locateLastRevisionItem(lines: string[]): RevisionItemPosition | null {
         const line = lines[i];
 
         if (!inRevisions) {
-            const m = line.match(/^(\s*)(?:Revisions|revisions)\s*:/);
+            const m = line.match(/^(\s*)revisions\s*:/i);
             if (m) { inRevisions = true; revisionsIndent = m[1].length; }
             continue;
         }
@@ -654,9 +654,9 @@ function updateLastRevisionDate(lines: string[], date: string): void {
 
     // If Date appears on the item line itself (inline flow or Date-first block), update it there
     const itemLine = lines[lastItemIdx];
-    if (/(Date|date)\s*:/.test(itemLine)) {
+    if (/\bdate\s*:/i.test(itemLine)) {
         lines[lastItemIdx] = itemLine.replace(
-            /((?:Date|date)\s*:\s*)("?)([^,"'}]*)("?)/,
+            /(\bdate\s*:\s*)("?)([^,"'}]*)("?)/i,
             (_, prefix, openQ, _val, closeQ) => `${prefix}${openQ}${date}${closeQ}`,
         );
         return;
@@ -671,9 +671,9 @@ function updateLastRevisionDate(lines: string[], date: string): void {
 
         if (lineIndent <= lastItemIndent) break;         // left this item
 
-        if (/(Date|date)\s*:/.test(line)) {
+        if (/\bdate\s*:/i.test(line)) {
             lines[i] = line.replace(
-                /((?:Date|date)\s*:\s*)("?)([^,"'}]*)("?)/,
+                /(\bdate\s*:\s*)("?)([^,"'}]*)("?)/i,
                 (_, prefix, openQ, _val, closeQ) => `${prefix}${openQ}${date}${closeQ}`,
             );
             return;
@@ -932,10 +932,17 @@ export function bumpRevisionAfterExport(
     }
 
     const nextRev = incrementRevision(lastRevEntry.revision);
-    const author  = lastRevEntry.author || fm.author || '';
     const today   = formatDate(new Date());
 
     const content = fs.readFileSync(markdownFile, 'utf8');
+
+    // The author fallback comes from the document's OWN frontmatter, never from
+    // `fm`: that one has the config's `frontmatterDefaults` applied, and a
+    // default is not something the document said, so it must not be written
+    // into the document's history.
+    const own    = reader(frontMatter(content).attributes);
+    const ownAuthor = reader((own('Document Info') ?? {}) as Record<string, unknown>)('Author') ?? own('Author');
+    const author = lastRevEntry.author || (ownAuthor != null ? `${ownAuthor}` : '');
 
     // The same compare-and-swap `prepareSourceUpdates` does, and here it guards
     // something worse than a date. `fm` was parsed at the start of the export; if
@@ -970,7 +977,7 @@ export function bumpRevisionAfterExport(
 
     // Replace every Status: value (top-level or nested, quoted or bare)
     yaml = yaml.replace(
-        /^(\s*(?:Status|status)\s*:\s*)(["']?).*\2$/gm,
+        /^(\s*status\s*:\s*)(["']?).*\2$/gim,
         `$1$2Work In Progress$2`,
     );
 
@@ -979,7 +986,7 @@ export function bumpRevisionAfterExport(
     // `- Revision: 2` line never matches in the first place. `Document Info`'s
     // nested Revision, being a plain indented key, is updated on purpose.
     yaml = yaml.replace(
-        /^(\s*(?:Revision|revision)\s*:\s*)(["']?).*\2$/gm,
+        /^(\s*revision\s*:\s*)(["']?).*\2$/gim,
         (_match, prefix: string, q: string) => `${prefix}${q}${nextRev}${q}`,
     );
 
