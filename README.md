@@ -318,8 +318,9 @@ tool will:
 1. append a new `Revisions` entry (next revision, today's date, the author of
    the entry before it, or the document's own `Author`; never a value from
    `frontmatterDefaults`),
-2. update every `Revision:` scalar to the new value,
-3. reset `Status:` to `Work In Progress`.
+2. move the document's `Revision:` (top level and under `Document Info`) to the
+   new value; the rows already in `Revisions` keep their own numbers,
+3. reset `Status:` (top level and under `Document Info`) to `Work In Progress`.
 
 It only does this for a document whose `Status` is `Released` / `Vrijgegeven` —
 the status is the document declaring it is final, the flag is you saying cut it

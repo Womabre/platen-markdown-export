@@ -22,6 +22,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   appended and the status stayed Released, so every later `--release` cut
   another one. The date stamp likewise skipped such documents. Every key is now
   matched in any casing and keeps its own spelling, including in the new row.
+- **`--release` no longer rewrites the revision history.** In a `Revisions` row
+  whose `Revision` was not its first key (`- Date: ...` then `Revision: 1`),
+  the release changed that row's number too, so every row in the history ended
+  up with the new revision. It now moves `Revision` and resets `Status` only at
+  the top level and under `Document Info`; history rows and `Variables` entries
+  are left alone.
 
 ### Changed
 

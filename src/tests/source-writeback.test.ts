@@ -225,6 +225,51 @@ describe('allOutputsLanded: the release', () => {
         assert.match(out, /- \{REVISION: 2, DATE: "2026-09-02", AUTHOR: "A", REMARKS: \}/);
     });
 
+    // The Revision and Status rewrite used to touch every indented line with
+    // that key, so a block row whose Revision is not its first key lost its own
+    // number: every history row became the new revision.
+    it('leaves the history alone when Revision is not a row\'s first key', () => {
+        const out = release([
+            '---',
+            'Title: T',
+            'Status: Released',
+            'Document Info:',
+            '  Revision: 2',
+            '  Status: Released',
+            'Revisions:',
+            '  - Date: "2026-01-01"',
+            '    Revision: 1',
+            '  - Remarks: outgoing',
+            '    Revision: 2',
+            '---',
+            '',
+            '# T',
+            '',
+        ].join('\n'));
+        const r = rows(out);
+        assert.deepEqual(r.map(x => String(x.Revision)), ['1', '2', '3'], 'each row keeps its own revision');
+        assert.match(out, /^Document Info:\n {2}Revision: 3\n {2}Status: Work In Progress$/m, 'Document Info moves on');
+        assert.match(out, /^Status: Work In Progress$/m, 'the top-level status resets');
+    });
+
+    it('leaves a Variables entry called Status or Revision alone', () => {
+        const out = release(doc('Released').replace('Title: T', 'Title: T\nVariables:\n  Status: Draft\n  REVISION: x'));
+        assert.match(out, /^ {2}Status: Draft$/m);
+        assert.match(out, /^ {2}REVISION: x$/m);
+        assert.match(out, /^Status: Work In Progress$/m);
+    });
+
+    it('takes the Document Info Author over a top-level Author', () => {
+        const out = release(inlineDoc('  - {Revision: 1, Date: "2020-01-01"}')
+            .replace('Title: T', 'Title: T\nAuthor: Top Level\nDocument Info:\n  Author: Info Author'));
+        assert.equal(rows(out)[1].Author, 'Info Author');
+    });
+
+    it('spells each key of a mixed-case row the way that row does', () => {
+        const out = release(inlineDoc('  - {Revision: 1, DATE: "2020-01-01", author: A}'));
+        assert.match(out, /- \{Revision: 2, DATE: "2026-09-02", author: "A", Remarks: \}/);
+    });
+
     it('spells a key the row lacks in the row\'s own style', () => {
         const out = release(inlineDoc('  - {REVISION: 1, DATE: "2020-01-01"}'), 'done');
         assert.match(out, /- \{REVISION: 1, DATE: "2026-09-02", REMARKS: done\}/);
@@ -340,6 +385,20 @@ describe('a document that changed under the export', () => {
         s.allOutputsLanded();
         assert.equal(read(f), 'replaced');
         assert.equal(warningCount(), 2, 'one for the stamp, one for the release');
+    });
+
+    it('does not cut a release on an edit when no stamp was needed', () => {
+        // Already stamped today, so the handle writes nothing before the release
+        // and its baseline is still what it read.
+        const f = file(doc('Released').replace('2020-01-01', STAMP));
+        const s = open(f, { release: true });
+        s.outputLanded();
+        assert.equal(s.written, null, 'nothing to stamp');
+        fs.writeFileSync(f, read(f).replace('Text.', 'More text.'));
+        const edited = read(f);
+        s.allOutputsLanded();
+        assert.equal(read(f), edited);
+        assert.equal(warningCount(), 1);
     });
 
     it('does nothing when the document vanished mid-export', () => {

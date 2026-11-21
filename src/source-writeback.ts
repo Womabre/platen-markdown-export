@@ -388,9 +388,9 @@ interface ReleaseEdit {
  * - the release note set as the Remarks of the outgoing revision row;
  * - a new Revisions row: the next revision, today's date, the outgoing row's
  *   author (or the document's own Author), empty remarks;
- * - every `Revision` scalar moved to the new value;
- * - every `Status` scalar reset to "Work In Progress", so a second `--release`
- *   finds nothing to release.
+ * - the document's `Revision` moved to the new value and its `Status` reset to
+ *   "Work In Progress", so a second `--release` finds nothing to release (see
+ *   {@link moveDocumentScalars} for exactly which keys).
  *
  * The reset is always the English "Work In Progress", including for a document
  * that said "Vrijgegeven": that is the status the README documents, and there
@@ -423,19 +423,45 @@ function releaseEdit(content: string, note: string | null, today: Date): Release
         : false;
 
     appendRevisionEntry(lines, to, author, formatDate(today));
-    let yaml = lines.join('\n');
+    moveDocumentScalars(lines, to);
 
-    // Every Status value, top-level or nested, quoted or bare, in any key casing.
-    yaml = yaml.replace(/^(\s*status\s*:\s*)(["']?).*\2$/gim, '$1$2Work In Progress$2');
+    return { content: `---\n${lines.join('\n')}\n---\n${verbatimBody(content, parsed.body)}`, from, to, noteRecorded };
+}
 
-    // Every Revision scalar. History rows are excluded by the pattern itself:
-    // `^\s*` cannot match the `-` that starts a list item, so a `- Revision: 2`
-    // line never matches in the first place. `Document Info`'s nested Revision,
-    // being a plain indented key, is updated on purpose.
-    yaml = yaml.replace(/^(\s*revision\s*:\s*)(["']?).*\2$/gim,
-                        (_match, prefix: string, q: string) => `${prefix}${q}${to}${q}`);
+/**
+ * Resets `Status` to Work In Progress and moves `Revision` to `to`, in place,
+ * wherever the reader looks for them: as top-level keys and as direct children
+ * of `Document Info`. Any key casing; quotes kept.
+ *
+ * Nowhere else. A pattern over every indented `Revision:` line also hit the
+ * history: in a block row whose Revision is not its first key (`- Date: ...`
+ * then `Revision: 1`) that line is a plain indented key, so every row in the
+ * document took the new number. A `Variables` entry that happens to be called
+ * Status or Revision is the author's own text and is left alone too.
+ */
+function moveDocumentScalars(lines: string[], to: string): void {
+    const move = (line: string): string => line
+        .replace(/^(\s*status\s*:\s*)(["']?).*\2$/i, '$1$2Work In Progress$2')
+        .replace(/^(\s*revision\s*:\s*)(["']?).*\2$/i,
+                 (_match, prefix: string, q: string) => `${prefix}${q}${to}${q}`);
 
-    return { content: `---\n${yaml}\n---\n${verbatimBody(content, parsed.body)}`, from, to, noteRecorded };
+    let block: string | null = null;    // the top-level key whose block we are in
+    let childIndent = -1;               // the indent of that block's direct children
+    for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trimStart();
+        if (trimmed === '' || trimmed.startsWith('#')) continue;
+        const indent = lines[i].length - trimmed.length;
+
+        if (indent === 0) {
+            block = /^([^:]+?)\s*:/.exec(trimmed)?.[1].toLowerCase() ?? null;
+            childIndent = -1;
+            lines[i] = move(lines[i]);
+            continue;
+        }
+        if (block !== 'document info') continue;
+        if (childIndent === -1) childIndent = indent;
+        if (indent === childIndent) lines[i] = move(lines[i]);
+    }
 }
 
 // ── The handle ────────────────────────────────────────────────────────────────
