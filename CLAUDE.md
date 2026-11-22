@@ -36,7 +36,7 @@ Each doc holds the rules and the bugs behind them for its area. Read every doc i
 | Anything else under `vscode-extension/src/` | `CODING_STANDARDS.md` (the `core.ts` rule) |
 | `infographic*.ts`, `assets/fonts/`; checking rendered PDF output | `docs/architecture/infographics.md` |
 | `bootstrap.ts`, `mermaid.ts`, `drawio.ts`; WeasyPrint, Chromium, draw.io or font installs | `docs/architecture/runtime-requirements.md` |
-| `scripts/run-tests.js`, `test-fixtures/`, the golden test, `main.test.ts`, CI test jobs | `docs/architecture/testing.md`, `CODING_STANDARDS.md` (the `require.main` rule: the fixture stays free of diagrams, images and icon fonts) |
+| `scripts/run-tests.js`, `test-fixtures/`, the golden test, `main.test.ts`, CI test jobs | `docs/architecture/testing.md` (the fixture stays free of diagrams, images and icon fonts) |
 | Reviewing a diff | `CODING_STANDARDS.md` |
 
 ## Rules
@@ -47,10 +47,10 @@ Each doc holds the rules and the bugs behind them for its area. Read every doc i
 - **A computed replacement always goes through `literal()` (`strings.ts`).**
 - **A degraded fetch never reaches the disk cache.** Bump `CACHE_SCHEMA` (`cache.ts`) when a cached value changes shape.
 - **`parseArgs` never calls `process.exit` and never writes to the console.** Throw `ExitError(message, code)`; the codes are listed in `--help` (`cli.ts`), 0 to 6. `VALUE_FLAGS` is the one list of value-taking options.
-- Pipeline progress goes through `log()` / `logResult()` (`logger.ts`), which respect `--quiet`.
+- Pipeline progress goes through `log()` / `logResult()` (`logger.ts`), never a bare `console.log`.
 - **Nothing transient is written into the user's document directory.**
 - **The WeasyPrint server is gated on a per-run capability token.** Build URLs with the returned `urlFor()`.
-- **WeasyPrint only reaches the network through `startServer`.** It always launches with the env from `buildWeasyprintEnv` and with `--allowed-protocols http,https,data`: `file://` would embed any readable file in the PDF.
+- **WeasyPrint only reaches the network through `startServer`.** It always launches with the env from `buildWeasyprintEnv`, and with `--allowed-protocols http,https,data` whenever the binary supports it: `file://` would embed any readable file in the PDF.
 - **Renderers that fan out over document matches must be bounded**, via `mapPool`/`createLimiter` (`concurrency.ts`).
 - **`index.ts` only runs `main()` under `require.main === module`**; tests drive `main({ argv })` in `--mode html`.
 - **The VS Code extension's editor-free logic lives in `vscode-extension/src/core.ts`.** Add pure logic there, not to `extension.ts`.
