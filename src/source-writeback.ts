@@ -4,11 +4,14 @@
  * The source document belongs to its author, and this module is the only code
  * that writes to it (see GLOSSARY.md). Two kinds of edit:
  *
- *   - on any export: today's date stamped on the last `Revisions` entry, and
- *     markdown-it-attrs syntax stripped from auto-generated TOC links;
+ *   - on any export: markdown-it-attrs syntax stripped from auto-generated TOC
+ *     links, and, when Status is Work In Progress or released, today's date
+ *     stamped on the last revision row;
  *   - on a release (`--release` on a document whose Status is released): the
- *     release note recorded on the outgoing revision, a new revision row, every
- *     `Revision` moved on and every `Status` reset to Work In Progress.
+ *     release note recorded on the outgoing revision row, a new revision row,
+ *     and the document's own `Revision` moved on and `Status` reset to Work In
+ *     Progress (top level and directly under Document Info; existing revision
+ *     rows keep their numbers).
  *
  * Three rules hold for all of them, and they are why this is one module:
  *
