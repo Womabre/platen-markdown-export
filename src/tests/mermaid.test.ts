@@ -62,6 +62,13 @@ describe('buildMermaidPage', () => {
         assert.match(page(), /look:\s*'classic'/);
     });
 
+    it('pins native SVG labels, because HTML labels lose their browser line wrapping', () => {
+        // With HTML labels mermaid wraps long lines inside a <foreignObject>;
+        // the <text> that replaces it for WeasyPrint keeps only the explicit
+        // <br> breaks, so every wrapped label overflowed its node.
+        assert.match(page(), /htmlLabels:\s*false/);
+    });
+
     it("initialises mermaid at securityLevel 'strict'", () => {
         assert.match(page(), /securityLevel:\s*'strict'/);
     });

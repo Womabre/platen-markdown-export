@@ -101,6 +101,15 @@ export function mermaidPlaceholder(diagramSource: string): string {
  * every flowchart, class and state diagram came out of the PDF with bright blue
  * borders. Classic is the flat look mermaid 11 drew, and prints as designed.
  *
+ * `htmlLabels: false` makes mermaid write labels as SVG `<text>` itself,
+ * wrapped at the width the browser measured. With HTML labels it wrapped long
+ * lines inside a `<foreignObject>`, and {@link replaceForeignObjects} kept only
+ * the explicit `<br>` breaks, so every wrapped label overflowed its node and
+ * edge labels lost their white background. `wrappingWidth: 200` restores the
+ * line length HTML labels had (SVG labels otherwise wrap at 120 and stack a
+ * three-line label into seven), and the `themeCSS` makes the edge-label
+ * background opaque: mermaid draws it at 50%, so the line showed through.
+ *
  * The page needs no network at all — the bundle is inlined here and the content
  * arrives via `setContent` — which is what lets the caller abort every request.
  */
@@ -112,7 +121,7 @@ export function buildMermaidPage(bundle: string, id: string, code: string): stri
 <div id="container"></div>
 <script>
 ${bundle}
-mermaid.initialize({ startOnLoad: false, theme: 'neutral', look: 'classic', securityLevel: 'strict' });
+mermaid.initialize({ startOnLoad: false, theme: 'neutral', look: 'classic', htmlLabels: false, flowchart: { wrappingWidth: 200 }, themeCSS: '.edgeLabel rect.background { fill: white; opacity: 1; }', securityLevel: 'strict' });
 mermaid.render(${jsonForScript(id)}, ${jsonForScript(code)})
     .then(function(r) {
         document.getElementById('container').innerHTML = r.svg;

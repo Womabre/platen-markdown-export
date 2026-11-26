@@ -8,6 +8,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-11-26
+
+### Fixed
+
+- **Mermaid labels no longer spill out of their nodes in the PDF.** Mermaid
+  wrapped long labels inside an HTML `<foreignObject>`, and the SVG text that
+  replaced it for WeasyPrint kept only the explicit `<br>` breaks, so a wrapped
+  line came out as one long line across the node border. Labels also looked
+  bold in a `classDef`-styled node. Diagrams now render with native SVG labels
+  (`htmlLabels: false`), wrapped by the browser at 200 px.
+- **Edge labels sit on a solid background.** The line no longer runs through
+  the text of a label such as `-->|job queue|`.
+
 ## [1.5.5] - 2026-11-22
 
 ### Fixed
